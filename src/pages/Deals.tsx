@@ -8,11 +8,19 @@ const Deals = () => {
   const { deals, customers, addDeal, updateDeal, deleteDeal } = useStore()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null)
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    title: string
+    customerId: string
+    amount: number
+    stage: 'lead' | 'proposal' | 'negotiation' | 'won' | 'lost'
+    probability: number
+    expectedCloseDate: string
+    notes: string
+  }>({
     title: '',
     customerId: '',
     amount: 0,
-    stage: 'lead' as const,
+    stage: 'lead',
     probability: 50,
     expectedCloseDate: new Date().toISOString().split('T')[0],
     notes: '',

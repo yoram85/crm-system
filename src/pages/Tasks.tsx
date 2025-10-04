@@ -8,14 +8,22 @@ const Tasks = () => {
   const { tasks, customers, deals, addTask, updateTask, deleteTask } = useStore()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    title: string
+    description: string
+    customerId: string
+    dealId: string
+    dueDate: string
+    priority: 'low' | 'medium' | 'high'
+    status: 'pending' | 'in-progress' | 'completed'
+  }>({
     title: '',
     description: '',
     customerId: '',
     dealId: '',
     dueDate: new Date().toISOString().split('T')[0],
-    priority: 'medium' as const,
-    status: 'pending' as const,
+    priority: 'medium',
+    status: 'pending',
   })
 
   const handleSubmit = (e: React.FormEvent) => {

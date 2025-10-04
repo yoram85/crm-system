@@ -32,10 +32,15 @@ export default function Customers() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    const customerData = {
+      ...formData,
+      name: `${formData.firstName} ${formData.lastName}`.trim(),
+    };
+
     if (editingCustomer) {
-      updateCustomer(editingCustomer.id, formData);
+      updateCustomer(editingCustomer.id, customerData);
     } else {
-      addCustomer(formData);
+      addCustomer(customerData);
     }
 
     handleCloseModal();

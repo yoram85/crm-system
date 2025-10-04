@@ -1,4 +1,4 @@
-import { Customer, Deal, Task, Product, Service, WebhookConfig, IntegrationConfig, GoogleSheetsConfig, AirtableConfig } from '../types'
+import { WebhookConfig, IntegrationConfig, GoogleSheetsConfig, AirtableConfig } from '../types'
 
 // Webhook sender with status tracking
 export const sendToWebhook = async (
