@@ -3,6 +3,7 @@ import { Settings as SettingsIcon, Database, Download, Upload, Trash2, Link as L
 import { format } from 'date-fns'
 import { useStore } from '../store/useStore'
 import { WebhookConfig, IntegrationConfig, GoogleSheetsConfig, AirtableConfig } from '../types'
+import GoogleSheetsPicker from '../components/GoogleSheetsPicker'
 
 const Settings = () => {
   const store = useStore()
@@ -845,6 +846,41 @@ const Settings = () => {
                       <li>8. <strong>חשוב:</strong> שתף את הגיליון עם ה-email מקובץ ה-JSON (client_email)</li>
                     </ol>
                     <p className="mt-2"><strong>Spreadsheet ID:</strong> נמצא ב-URL של הגיליון בין <code>/d/</code> ו-<code>/edit</code></p>
+                  </div>
+
+                  {/* Google Sheets Picker */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 className="font-medium text-blue-900 mb-2">🎯 דרך מהירה: בחר גיליון ישירות</h4>
+                    <GoogleSheetsPicker
+                      clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}
+                      apiKey={import.meta.env.VITE_GOOGLE_API_KEY}
+                      onSelect={(spreadsheetId, spreadsheetName, sheets) => {
+                        setGoogleSheetsForm({
+                          ...googleSheetsForm,
+                          spreadsheetId,
+                          sheetNames: {
+                            customers: sheets.find(s => s.toLowerCase().includes('customer') || s.includes('לקוח')) || '',
+                            deals: sheets.find(s => s.toLowerCase().includes('deal') || s.includes('עסקא')) || '',
+                            tasks: sheets.find(s => s.toLowerCase().includes('task') || s.includes('משימ')) || '',
+                            products: sheets.find(s => s.toLowerCase().includes('product') || s.includes('מוצר')) || '',
+                            services: sheets.find(s => s.toLowerCase().includes('service') || s.includes('שירות')) || '',
+                          },
+                        })
+                        alert(`✅ נבחר: ${spreadsheetName}\n\nנמצאו ${sheets.length} גיליונות: ${sheets.join(', ')}`)
+                      }}
+                    />
+                    <p className="text-xs text-blue-700 mt-2">
+                      💡 לחץ על הכפתור למעלה כדי לבחור גיליון מ-Google Drive שלך
+                    </p>
+                  </div>
+
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-300"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 bg-white text-gray-500">או הזן ידנית</span>
+                    </div>
                   </div>
 
                   <div>
