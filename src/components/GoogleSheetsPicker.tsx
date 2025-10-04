@@ -39,18 +39,21 @@ export default function GoogleSheetsPicker({ onSelect, clientId, apiKey }: Googl
     setError(null)
 
     try {
-      // Initialize the Google API client
-      await new Promise((resolve) => {
-        window.gapi.load('client:picker', resolve)
+      // Initialize the Google API client and Picker
+      await new Promise((resolve, reject) => {
+        window.gapi.load('client:picker', {
+          callback: resolve,
+          onerror: reject,
+        })
       })
 
-      // Initialize the client
+      // Initialize the client with API key
       await window.gapi.client.init({
         apiKey: apiKey,
         discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
       })
 
-      // Create and render a Picker object for searching spreadsheets
+      // Create OAuth token client
       const tokenClient = window.google.accounts.oauth2.initTokenClient({
         client_id: clientId,
         scope: 'https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/drive.readonly',
@@ -61,45 +64,50 @@ export default function GoogleSheetsPicker({ onSelect, clientId, apiKey }: Googl
             return
           }
 
-          // Create picker
-          const picker = new window.google.picker.PickerBuilder()
-            .addView(
-              new window.google.picker.DocsView(window.google.picker.ViewId.SPREADSHEETS)
-                .setIncludeFolders(true)
-            )
-            .setOAuthToken(response.access_token)
-            .setDeveloperKey(apiKey)
-            .setCallback(async (data: any) => {
-              if (data.action === window.google.picker.Action.PICKED) {
-                const spreadsheetId = data.docs[0].id
-                const spreadsheetName = data.docs[0].name
+          try {
+            // Create picker with proper API key setup
+            const view = new window.google.picker.DocsView(window.google.picker.ViewId.SPREADSHEETS)
+              .setIncludeFolders(true)
 
-                try {
-                  // Fetch sheet names
-                  const sheetsResponse = await window.gapi.client.sheets.spreadsheets.get({
-                    spreadsheetId: spreadsheetId,
-                  })
+            const picker = new window.google.picker.PickerBuilder()
+              .addView(view)
+              .setOAuthToken(response.access_token)
+              .setDeveloperKey(apiKey!)
+              .setCallback(async (data: any) => {
+                if (data.action === window.google.picker.Action.PICKED) {
+                  const spreadsheetId = data.docs[0].id
+                  const spreadsheetName = data.docs[0].name
 
-                  const sheets = sheetsResponse.result.sheets.map((sheet: any) => sheet.properties.title)
+                  try {
+                    // Fetch sheet names
+                    const sheetsResponse = await window.gapi.client.sheets.spreadsheets.get({
+                      spreadsheetId: spreadsheetId,
+                    })
 
-                  onSelect(spreadsheetId, spreadsheetName, sheets)
-                  setIsLoading(false)
-                } catch (err: any) {
-                  setError('שגיאה בטעינת הגיליונות: ' + err.message)
+                    const sheets = sheetsResponse.result.sheets.map((sheet: any) => sheet.properties.title)
+
+                    onSelect(spreadsheetId, spreadsheetName, sheets)
+                    setIsLoading(false)
+                  } catch (err: any) {
+                    setError('שגיאה בטעינת הגיליונות: ' + err.message)
+                    setIsLoading(false)
+                  }
+                } else if (data.action === window.google.picker.Action.CANCEL) {
                   setIsLoading(false)
                 }
-              } else if (data.action === window.google.picker.Action.CANCEL) {
-                setIsLoading(false)
-              }
-            })
-            .build()
+              })
+              .build()
 
-          picker.setVisible(true)
+            picker.setVisible(true)
+          } catch (err: any) {
+            setError('שגיאה ביצירת Picker: ' + err.message)
+            setIsLoading(false)
+          }
         },
       })
 
       // Request access token
-      tokenClient.requestAccessToken()
+      tokenClient.requestAccessToken({ prompt: '' })
     } catch (err: any) {
       setError('שגיאה בפתיחת Google Picker: ' + err.message)
       setIsLoading(false)
