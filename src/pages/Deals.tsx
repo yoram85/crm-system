@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useStore } from '../store/useStore'
-import { Plus, Edit2, Trash2, DollarSign, TrendingUp, Search, Filter, Download } from 'lucide-react'
+import { Plus, Edit2, Trash2, DollarSign, TrendingUp, Search, Filter, Download, LayoutGrid, Columns } from 'lucide-react'
 import { Deal, DealItem } from '../types'
 import { format } from 'date-fns'
 import DealItemsSelector from '../components/DealItemsSelector'
 import { exportDealsToCSV } from '../utils/csvExport'
+import DealsPipeline from '../components/DealsPipeline'
 
 const Deals = () => {
   const { deals, customers, products, services, addDeal, updateDeal, deleteDeal } = useStore()
@@ -12,6 +13,7 @@ const Deals = () => {
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [stageFilter, setStageFilter] = useState<'all' | 'lead' | 'proposal' | 'negotiation' | 'won' | 'lost'>('all')
+  const [viewMode, setViewMode] = useState<'grid' | 'pipeline'>('grid')
   const [formData, setFormData] = useState<{
     title: string
     customerId: string
@@ -146,6 +148,32 @@ const Deals = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">ניהול עסקאות</h1>
         <div className="flex gap-3">
+          {/* View Mode Toggle */}
+          <div className="flex bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
+                viewMode === 'grid'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              <LayoutGrid size={18} />
+              <span className="text-sm font-medium">רשימה</span>
+            </button>
+            <button
+              onClick={() => setViewMode('pipeline')}
+              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
+                viewMode === 'pipeline'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              <Columns size={18} />
+              <span className="text-sm font-medium">Pipeline</span>
+            </button>
+          </div>
+
           <button
             onClick={() => exportDealsToCSV(deals, customers)}
             className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
@@ -163,39 +191,44 @@ const Deals = () => {
         </div>
       </div>
 
-      {/* Search and Filter */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="relative">
-            <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-            <input
-              type="text"
-              placeholder="חיפוש לפי כותרת, לקוח או הערות..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+      {/* Pipeline View */}
+      {viewMode === 'pipeline' ? (
+        <DealsPipeline />
+      ) : (
+        <>
+          {/* Search and Filter - Only in Grid View */}
+          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="relative">
+                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <input
+                  type="text"
+                  placeholder="חיפוש לפי כותרת, לקוח או הערות..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div className="relative">
+                <Filter className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <select
+                  value={stageFilter}
+                  onChange={(e) => setStageFilter(e.target.value as any)}
+                  className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
+                >
+                  <option value="all">כל השלבים</option>
+                  <option value="lead">ליד</option>
+                  <option value="proposal">הצעת מחיר</option>
+                  <option value="negotiation">משא ומתן</option>
+                  <option value="won">נסגר בהצלחה</option>
+                  <option value="lost">אבוד</option>
+                </select>
+              </div>
+            </div>
           </div>
-          <div className="relative">
-            <Filter className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-            <select
-              value={stageFilter}
-              onChange={(e) => setStageFilter(e.target.value as any)}
-              className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
-            >
-              <option value="all">כל השלבים</option>
-              <option value="lead">ליד</option>
-              <option value="proposal">הצעת מחיר</option>
-              <option value="negotiation">משא ומתן</option>
-              <option value="won">נסגר בהצלחה</option>
-              <option value="lost">אבוד</option>
-            </select>
-          </div>
-        </div>
-      </div>
 
-      {/* Deals Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Deals Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredDeals.map((deal) => (
           <div key={deal.id} className="card hover:shadow-lg transition-shadow">
             <div className="flex justify-between items-start mb-4">
@@ -249,18 +282,20 @@ const Deals = () => {
         ))}
       </div>
 
-      {filteredDeals.length === 0 && deals.length > 0 && (
-        <div className="text-center py-12 text-gray-500">
-          <DollarSign size={48} className="mx-auto mb-4 opacity-50" />
-          <p>לא נמצאו עסקאות התואמות את החיפוש</p>
-        </div>
-      )}
+          {filteredDeals.length === 0 && deals.length > 0 && (
+            <div className="text-center py-12 text-gray-500">
+              <DollarSign size={48} className="mx-auto mb-4 opacity-50" />
+              <p>לא נמצאו עסקאות התואמות את החיפוש</p>
+            </div>
+          )}
 
-      {deals.length === 0 && (
-        <div className="text-center py-12 text-gray-500">
-          <DollarSign size={48} className="mx-auto mb-4 opacity-50" />
-          <p>אין עסקאות עדיין. הוסף עסקה ראשונה!</p>
-        </div>
+          {deals.length === 0 && (
+            <div className="text-center py-12 text-gray-500">
+              <DollarSign size={48} className="mx-auto mb-4 opacity-50" />
+              <p>אין עסקאות עדיין. הוסף עסקה ראשונה!</p>
+            </div>
+          )}
+        </>
       )}
 
       {/* Modal */}

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Home, Users, DollarSign, CheckSquare, Package, Briefcase, Settings, Menu, X } from 'lucide-react'
+import NotificationCenter from './NotificationCenter'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -25,7 +26,10 @@ const Layout = ({ children }: LayoutProps) => {
       {/* Header */}
       <header className="bg-white shadow-sm fixed top-0 left-0 right-0 z-40">
         <div className="flex items-center justify-between px-4 py-3">
-          <h1 className="text-xl font-bold text-primary-600">מערכת CRM</h1>
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-bold text-primary-600">מערכת CRM</h1>
+            <NotificationCenter />
+          </div>
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
