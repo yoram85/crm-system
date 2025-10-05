@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect } from 'react'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import Login from './pages/Login'
@@ -18,7 +19,12 @@ import TeamPerformance from './pages/TeamPerformance'
 import { useAuthStore } from './store/useAuthStore'
 
 function App() {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, initializeAuth } = useAuthStore()
+
+  // Initialize Supabase auth on app load
+  useEffect(() => {
+    initializeAuth()
+  }, [])
 
   return (
     <Router>

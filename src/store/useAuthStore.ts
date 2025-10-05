@@ -1,15 +1,17 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { User, AuthState } from '../types'
+import { supabase, isSupabaseConfigured } from '../lib/supabase'
 
 interface AuthStore extends AuthState {
   login: (email: string, password: string) => Promise<boolean>
   register: (email: string, password: string, firstName: string, lastName: string) => Promise<boolean>
   logout: () => void
   updateLastLogin: () => void
+  initializeAuth: () => Promise<void>
 }
 
-// Mock users database (in real app, this would be in backend)
+// Mock users database (fallback when Supabase is not configured)
 const mockUsers: Array<User & { password: string }> = [
   {
     id: '1',
@@ -48,12 +50,114 @@ const mockUsers: Array<User & { password: string }> = [
 
 export const useAuthStore = create<AuthStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       isAuthenticated: false,
 
+      // Initialize auth - check for existing Supabase session
+      initializeAuth: async () => {
+        if (!isSupabaseConfigured()) {
+          console.log('Supabase not configured, using mock auth')
+          return
+        }
+
+        try {
+          const { data: { session } } = await supabase.auth.getSession()
+
+          if (session?.user) {
+            // Get user profile from database
+            const { data: profile, error } = await supabase
+              .from('user_profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .single()
+
+            if (!error && profile) {
+              const user: User = {
+                id: profile.id,
+                email: session.user.email || '',
+                firstName: profile.first_name,
+                lastName: profile.last_name,
+                role: profile.role,
+                status: profile.status,
+                avatar: profile.avatar,
+                phone: profile.phone,
+                department: profile.department,
+                monthlyTarget: profile.monthly_target,
+                createdAt: new Date(profile.created_at),
+                lastLogin: profile.last_login ? new Date(profile.last_login) : undefined,
+              }
+
+              set({ user, isAuthenticated: true })
+            }
+          }
+        } catch (error) {
+          console.error('Error initializing auth:', error)
+        }
+      },
+
       login: async (email: string, password: string) => {
-        // Simulate API call
+        // Use Supabase Auth if configured
+        if (isSupabaseConfigured()) {
+          try {
+            const { data, error } = await supabase.auth.signInWithPassword({
+              email,
+              password,
+            })
+
+            if (error) {
+              console.error('Login error:', error.message)
+              return false
+            }
+
+            if (data.user) {
+              // Get user profile
+              const { data: profile, error: profileError } = await supabase
+                .from('user_profiles')
+                .select('*')
+                .eq('id', data.user.id)
+                .single()
+
+              if (profileError) {
+                console.error('Profile error:', profileError.message)
+                return false
+              }
+
+              // Update last login
+              await supabase
+                .from('user_profiles')
+                .update({ last_login: new Date().toISOString() })
+                .eq('id', data.user.id)
+
+              const user: User = {
+                id: profile.id,
+                email: data.user.email || '',
+                firstName: profile.first_name,
+                lastName: profile.last_name,
+                role: profile.role,
+                status: profile.status,
+                avatar: profile.avatar,
+                phone: profile.phone,
+                department: profile.department,
+                monthlyTarget: profile.monthly_target,
+                createdAt: new Date(profile.created_at),
+                lastLogin: new Date(),
+              }
+
+              set({
+                user,
+                isAuthenticated: true,
+              })
+
+              return true
+            }
+          } catch (error) {
+            console.error('Login error:', error)
+            return false
+          }
+        }
+
+        // Fallback to mock auth
         await new Promise((resolve) => setTimeout(resolve, 500))
 
         const user = mockUsers.find(
@@ -78,7 +182,69 @@ export const useAuthStore = create<AuthStore>()(
         firstName: string,
         lastName: string
       ) => {
-        // Simulate API call
+        // Use Supabase Auth if configured
+        if (isSupabaseConfigured()) {
+          try {
+            const { data, error } = await supabase.auth.signUp({
+              email,
+              password,
+              options: {
+                data: {
+                  first_name: firstName,
+                  last_name: lastName,
+                  role: 'sales', // Default role
+                },
+              },
+            })
+
+            if (error) {
+              console.error('Registration error:', error.message)
+              return false
+            }
+
+            if (data.user) {
+              // Profile is created automatically by trigger
+              // Wait a bit for the trigger to complete
+              await new Promise((resolve) => setTimeout(resolve, 500))
+
+              // Get the created profile
+              const { data: profile } = await supabase
+                .from('user_profiles')
+                .select('*')
+                .eq('id', data.user.id)
+                .single()
+
+              if (profile) {
+                const user: User = {
+                  id: profile.id,
+                  email: data.user.email || '',
+                  firstName: profile.first_name,
+                  lastName: profile.last_name,
+                  role: profile.role,
+                  status: profile.status,
+                  avatar: profile.avatar,
+                  phone: profile.phone,
+                  department: profile.department,
+                  monthlyTarget: profile.monthly_target,
+                  createdAt: new Date(profile.created_at),
+                  lastLogin: new Date(),
+                }
+
+                set({
+                  user,
+                  isAuthenticated: true,
+                })
+
+                return true
+              }
+            }
+          } catch (error) {
+            console.error('Registration error:', error)
+            return false
+          }
+        }
+
+        // Fallback to mock auth
         await new Promise((resolve) => setTimeout(resolve, 500))
 
         // Check if user exists
@@ -108,11 +274,22 @@ export const useAuthStore = create<AuthStore>()(
         return true
       },
 
-      logout: () => {
+      logout: async () => {
+        if (isSupabaseConfigured()) {
+          await supabase.auth.signOut()
+        }
         set({ user: null, isAuthenticated: false })
       },
 
-      updateLastLogin: () => {
+      updateLastLogin: async () => {
+        const state = get()
+        if (state.user && isSupabaseConfigured()) {
+          await supabase
+            .from('user_profiles')
+            .update({ last_login: new Date().toISOString() })
+            .eq('id', state.user.id)
+        }
+
         set((state) => ({
           user: state.user ? { ...state.user, lastLogin: new Date() } : null,
         }))
@@ -123,3 +300,15 @@ export const useAuthStore = create<AuthStore>()(
     }
   )
 )
+
+// Listen to auth state changes
+if (isSupabaseConfigured()) {
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_OUT') {
+      useAuthStore.getState().logout()
+    } else if (event === 'SIGNED_IN' && session?.user) {
+      // Refresh user data
+      await useAuthStore.getState().initializeAuth()
+    }
+  })
+}
