@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { Customer, Deal, Task, Product, Service, WebhookConfig, IntegrationConfig, User, Activity, Permission } from '../types'
 import { notifyWebhooks, syncToIntegrations } from '../utils/integrations'
+import { isSupabaseConfigured } from '../lib/supabase'
+import * as supabaseSync from '../lib/supabaseSync'
 
 interface CRMState {
   customers: Customer[]
@@ -14,31 +16,36 @@ interface CRMState {
   users: User[]
   activities: Activity[]
   currentUser: User | null
+  isLoading: boolean
+  lastSync: Date | null
+
+  // Data loading
+  loadAllData: () => Promise<void>
 
   // Customer methods
-  addCustomer: (customer: Omit<Customer, 'id' | 'createdAt'>) => void
-  updateCustomer: (id: string, customer: Partial<Customer>) => void
-  deleteCustomer: (id: string) => void
+  addCustomer: (customer: Omit<Customer, 'id' | 'createdAt'>) => Promise<void>
+  updateCustomer: (id: string, customer: Partial<Customer>) => Promise<void>
+  deleteCustomer: (id: string) => Promise<void>
 
   // Deal methods
-  addDeal: (deal: Omit<Deal, 'id' | 'createdAt'>) => void
-  updateDeal: (id: string, deal: Partial<Deal>) => void
-  deleteDeal: (id: string) => void
+  addDeal: (deal: Omit<Deal, 'id' | 'createdAt'>) => Promise<void>
+  updateDeal: (id: string, deal: Partial<Deal>) => Promise<void>
+  deleteDeal: (id: string) => Promise<void>
 
   // Task methods
-  addTask: (task: Omit<Task, 'id' | 'createdAt'>) => void
-  updateTask: (id: string, task: Partial<Task>) => void
-  deleteTask: (id: string) => void
+  addTask: (task: Omit<Task, 'id' | 'createdAt'>) => Promise<void>
+  updateTask: (id: string, task: Partial<Task>) => Promise<void>
+  deleteTask: (id: string) => Promise<void>
 
   // Product methods
-  addProduct: (product: Omit<Product, 'id' | 'createdAt'>) => void
-  updateProduct: (id: string, product: Partial<Product>) => void
-  deleteProduct: (id: string) => void
+  addProduct: (product: Omit<Product, 'id' | 'createdAt'>) => Promise<void>
+  updateProduct: (id: string, product: Partial<Product>) => Promise<void>
+  deleteProduct: (id: string) => Promise<void>
 
   // Service methods
-  addService: (service: Omit<Service, 'id' | 'createdAt'>) => void
-  updateService: (id: string, service: Partial<Service>) => void
-  deleteService: (id: string) => void
+  addService: (service: Omit<Service, 'id' | 'createdAt'>) => Promise<void>
+  updateService: (id: string, service: Partial<Service>) => Promise<void>
+  deleteService: (id: string) => Promise<void>
 
   // Webhook methods
   addWebhook: (webhook: Omit<WebhookConfig, 'id' | 'createdAt'>) => void
@@ -58,7 +65,7 @@ interface CRMState {
   hasPermission: (permission: Permission) => boolean
 
   // Activity methods
-  addActivity: (activity: Omit<Activity, 'id' | 'timestamp'>) => void
+  addActivity: (activity: Omit<Activity, 'id' | 'timestamp'>) => Promise<void>
   getActivities: (limit?: number) => Activity[]
   getUserActivities: (userId: string, limit?: number) => Activity[]
 }
@@ -70,7 +77,7 @@ const getUpdateWebhook = () => (id: string, updates: Partial<WebhookConfig>) => 
 
 export const useStore = create<CRMState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       customers: [],
       deals: [],
       tasks: [],
@@ -81,30 +88,88 @@ export const useStore = create<CRMState>()(
       users: [],
       activities: [],
       currentUser: null,
+      isLoading: false,
+      lastSync: null,
+
+      // Load all data from Supabase
+      loadAllData: async () => {
+        if (!isSupabaseConfigured()) return
+
+        set({ isLoading: true })
+
+        try {
+          const [customers, deals, tasks, products, services, activities] = await Promise.all([
+            supabaseSync.fetchCustomers(),
+            supabaseSync.fetchDeals(),
+            supabaseSync.fetchTasks(),
+            supabaseSync.fetchProducts(),
+            supabaseSync.fetchServices(),
+            supabaseSync.fetchActivities(100),
+          ])
+
+          set({
+            customers,
+            deals,
+            tasks,
+            products,
+            services,
+            activities,
+            lastSync: new Date(),
+            isLoading: false,
+          })
+        } catch (error) {
+          console.error('Error loading data:', error)
+          set({ isLoading: false })
+        }
+      },
 
       // Customer methods
-      addCustomer: (customer) =>
-        set((state) => {
-          const newCustomer = {
-            ...customer,
-            id: crypto.randomUUID(),
-            createdAt: new Date(),
-            name: `${customer.firstName} ${customer.lastName}`.trim(),
+      addCustomer: async (customer) => {
+        const newCustomer = {
+          ...customer,
+          id: crypto.randomUUID(),
+          createdAt: new Date(),
+          name: `${customer.firstName} ${customer.lastName}`.trim(),
+        }
+
+        // Update local state immediately
+        set((state) => ({
+          customers: [...state.customers, newCustomer],
+        }))
+
+        // Sync to Supabase
+        if (isSupabaseConfigured()) {
+          const created = await supabaseSync.createCustomer(newCustomer)
+          if (created) {
+            // Update with actual ID from Supabase
+            set((state) => ({
+              customers: state.customers.map(c =>
+                c.id === newCustomer.id ? created : c
+              ),
+            }))
           }
+        }
 
-          // Send to webhooks and integrations
-          notifyWebhooks(state.webhooks, 'customer', 'create', newCustomer, getUpdateWebhook())
-          syncToIntegrations(state.integrations, 'customers', 'create', newCustomer)
+        // Send to webhooks and integrations
+        const state = get()
+        notifyWebhooks(state.webhooks, 'customer', 'create', newCustomer, getUpdateWebhook())
+        syncToIntegrations(state.integrations, 'customers', 'create', newCustomer)
 
-          return {
-            customers: [...state.customers, newCustomer],
-          }
-        }),
+        // Log activity
+        await get().addActivity({
+          userId: state.currentUser?.id || 'system',
+          type: 'customer',
+          action: 'created',
+          entityId: newCustomer.id,
+          entityName: newCustomer.name,
+          description: `נוצר לקוח חדש: ${newCustomer.name}`,
+        })
+      },
 
-      updateCustomer: (id, customer) =>
+      updateCustomer: async (id, customer) => {
+        let updatedCustomer: Customer | null = null
+
         set((state) => {
-          let updatedCustomer: Customer | null = null
-
           const customers = state.customers.map((c) => {
             if (c.id === id) {
               const updated = { ...c, ...customer }
@@ -116,51 +181,98 @@ export const useStore = create<CRMState>()(
             }
             return c
           })
-
-          // Send to webhooks and integrations
-          if (updatedCustomer) {
-            notifyWebhooks(state.webhooks, 'customer', 'update', updatedCustomer, getUpdateWebhook())
-            syncToIntegrations(state.integrations, 'customers', 'update', updatedCustomer)
-          }
-
           return { customers }
-        }),
+        })
 
-      deleteCustomer: (id) =>
-        set((state) => {
-          const deletedCustomer = state.customers.find((c) => c.id === id)
+        // Sync to Supabase
+        if (isSupabaseConfigured() && updatedCustomer) {
+          await supabaseSync.updateCustomer(id, customer)
+        }
 
-          // Send to webhooks
-          if (deletedCustomer) {
-            notifyWebhooks(state.webhooks, 'customer', 'delete', deletedCustomer, getUpdateWebhook())
-          }
+        // Send to webhooks and integrations
+        if (updatedCustomer) {
+          const state = get()
+          notifyWebhooks(state.webhooks, 'customer', 'update', updatedCustomer, getUpdateWebhook())
+          syncToIntegrations(state.integrations, 'customers', 'update', updatedCustomer)
 
-          return {
-            customers: state.customers.filter((c) => c.id !== id),
-          }
-        }),
+          await get().addActivity({
+            userId: state.currentUser?.id || 'system',
+            type: 'customer',
+            action: 'updated',
+            entityId: updatedCustomer.id,
+            entityName: updatedCustomer.name,
+            description: `עודכן לקוח: ${updatedCustomer.name}`,
+          })
+        }
+      },
+
+      deleteCustomer: async (id) => {
+        const deletedCustomer = get().customers.find((c) => c.id === id)
+
+        set((state) => ({
+          customers: state.customers.filter((c) => c.id !== id),
+        }))
+
+        // Sync to Supabase
+        if (isSupabaseConfigured()) {
+          await supabaseSync.deleteCustomer(id)
+        }
+
+        // Send to webhooks
+        if (deletedCustomer) {
+          const state = get()
+          notifyWebhooks(state.webhooks, 'customer', 'delete', deletedCustomer, getUpdateWebhook())
+
+          await get().addActivity({
+            userId: state.currentUser?.id || 'system',
+            type: 'customer',
+            action: 'deleted',
+            entityId: deletedCustomer.id,
+            entityName: deletedCustomer.name,
+            description: `נמחק לקוח: ${deletedCustomer.name}`,
+          })
+        }
+      },
 
       // Deal methods
-      addDeal: (deal) =>
-        set((state) => {
-          const newDeal = {
-            ...deal,
-            id: crypto.randomUUID(),
-            createdAt: new Date(),
+      addDeal: async (deal) => {
+        const newDeal = {
+          ...deal,
+          id: crypto.randomUUID(),
+          createdAt: new Date(),
+        }
+
+        set((state) => ({
+          deals: [...state.deals, newDeal],
+        }))
+
+        if (isSupabaseConfigured()) {
+          const created = await supabaseSync.createDeal(newDeal)
+          if (created) {
+            set((state) => ({
+              deals: state.deals.map(d => d.id === newDeal.id ? created : d),
+            }))
           }
+        }
 
-          notifyWebhooks(state.webhooks, 'deal', 'create', newDeal, getUpdateWebhook())
-          syncToIntegrations(state.integrations, 'deals', 'create', newDeal)
+        const state = get()
+        notifyWebhooks(state.webhooks, 'deal', 'create', newDeal, getUpdateWebhook())
+        syncToIntegrations(state.integrations, 'deals', 'create', newDeal)
 
-          return {
-            deals: [...state.deals, newDeal],
-          }
-        }),
+        await get().addActivity({
+          userId: state.currentUser?.id || 'system',
+          type: 'deal',
+          action: 'created',
+          entityId: newDeal.id,
+          entityName: newDeal.title,
+          description: `נוצרה עסקה חדשה: ${newDeal.title}`,
+        })
+      },
 
-      updateDeal: (id, deal) =>
+      updateDeal: async (id, deal) => {
+        let updatedDeal: Deal | null = null
+
         set((state) => {
-          let updatedDeal: Deal | null = null
-
           const deals = state.deals.map((d) => {
             if (d.id === id) {
               const updated = { ...d, ...deal }
@@ -169,49 +281,94 @@ export const useStore = create<CRMState>()(
             }
             return d
           })
-
-          if (updatedDeal) {
-            notifyWebhooks(state.webhooks, 'deal', 'update', updatedDeal, getUpdateWebhook())
-            syncToIntegrations(state.integrations, 'deals', 'update', updatedDeal)
-          }
-
           return { deals }
-        }),
+        })
 
-      deleteDeal: (id) =>
-        set((state) => {
-          const deletedDeal = state.deals.find((d) => d.id === id)
+        if (isSupabaseConfigured() && updatedDeal) {
+          await supabaseSync.updateDeal(id, deal)
+        }
 
-          if (deletedDeal) {
-            notifyWebhooks(state.webhooks, 'deal', 'delete', deletedDeal, getUpdateWebhook())
-          }
+        if (updatedDeal) {
+          const state = get()
+          notifyWebhooks(state.webhooks, 'deal', 'update', updatedDeal, getUpdateWebhook())
+          syncToIntegrations(state.integrations, 'deals', 'update', updatedDeal)
 
-          return {
-            deals: state.deals.filter((d) => d.id !== id),
-          }
-        }),
+          await get().addActivity({
+            userId: state.currentUser?.id || 'system',
+            type: 'deal',
+            action: 'updated',
+            entityId: updatedDeal.id,
+            entityName: updatedDeal.title,
+            description: `עודכנה עסקה: ${updatedDeal.title}`,
+          })
+        }
+      },
+
+      deleteDeal: async (id) => {
+        const deletedDeal = get().deals.find((d) => d.id === id)
+
+        set((state) => ({
+          deals: state.deals.filter((d) => d.id !== id),
+        }))
+
+        if (isSupabaseConfigured()) {
+          await supabaseSync.deleteDeal(id)
+        }
+
+        if (deletedDeal) {
+          const state = get()
+          notifyWebhooks(state.webhooks, 'deal', 'delete', deletedDeal, getUpdateWebhook())
+
+          await get().addActivity({
+            userId: state.currentUser?.id || 'system',
+            type: 'deal',
+            action: 'deleted',
+            entityId: deletedDeal.id,
+            entityName: deletedDeal.title,
+            description: `נמחקה עסקה: ${deletedDeal.title}`,
+          })
+        }
+      },
 
       // Task methods
-      addTask: (task) =>
-        set((state) => {
-          const newTask = {
-            ...task,
-            id: crypto.randomUUID(),
-            createdAt: new Date(),
+      addTask: async (task) => {
+        const newTask = {
+          ...task,
+          id: crypto.randomUUID(),
+          createdAt: new Date(),
+        }
+
+        set((state) => ({
+          tasks: [...state.tasks, newTask],
+        }))
+
+        if (isSupabaseConfigured()) {
+          const created = await supabaseSync.createTask(newTask)
+          if (created) {
+            set((state) => ({
+              tasks: state.tasks.map(t => t.id === newTask.id ? created : t),
+            }))
           }
+        }
 
-          notifyWebhooks(state.webhooks, 'task', 'create', newTask, getUpdateWebhook())
-          syncToIntegrations(state.integrations, 'tasks', 'create', newTask)
+        const state = get()
+        notifyWebhooks(state.webhooks, 'task', 'create', newTask, getUpdateWebhook())
+        syncToIntegrations(state.integrations, 'tasks', 'create', newTask)
 
-          return {
-            tasks: [...state.tasks, newTask],
-          }
-        }),
+        await get().addActivity({
+          userId: state.currentUser?.id || 'system',
+          type: 'task',
+          action: 'created',
+          entityId: newTask.id,
+          entityName: newTask.title,
+          description: `נוצרה משימה חדשה: ${newTask.title}`,
+        })
+      },
 
-      updateTask: (id, task) =>
+      updateTask: async (id, task) => {
+        let updatedTask: Task | null = null
+
         set((state) => {
-          let updatedTask: Task | null = null
-
           const tasks = state.tasks.map((t) => {
             if (t.id === id) {
               const updated = { ...t, ...task }
@@ -220,49 +377,85 @@ export const useStore = create<CRMState>()(
             }
             return t
           })
-
-          if (updatedTask) {
-            notifyWebhooks(state.webhooks, 'task', 'update', updatedTask, getUpdateWebhook())
-            syncToIntegrations(state.integrations, 'tasks', 'update', updatedTask)
-          }
-
           return { tasks }
-        }),
+        })
 
-      deleteTask: (id) =>
-        set((state) => {
-          const deletedTask = state.tasks.find((t) => t.id === id)
+        if (isSupabaseConfigured() && updatedTask) {
+          await supabaseSync.updateTask(id, task)
+        }
 
-          if (deletedTask) {
-            notifyWebhooks(state.webhooks, 'task', 'delete', deletedTask, getUpdateWebhook())
-          }
+        if (updatedTask) {
+          const state = get()
+          notifyWebhooks(state.webhooks, 'task', 'update', updatedTask, getUpdateWebhook())
+          syncToIntegrations(state.integrations, 'tasks', 'update', updatedTask)
 
-          return {
-            tasks: state.tasks.filter((t) => t.id !== id),
-          }
-        }),
+          await get().addActivity({
+            userId: state.currentUser?.id || 'system',
+            type: 'task',
+            action: updatedTask.status === 'completed' ? 'completed' : 'updated',
+            entityId: updatedTask.id,
+            entityName: updatedTask.title,
+            description: `עודכנה משימה: ${updatedTask.title}`,
+          })
+        }
+      },
+
+      deleteTask: async (id) => {
+        const deletedTask = get().tasks.find((t) => t.id === id)
+
+        set((state) => ({
+          tasks: state.tasks.filter((t) => t.id !== id),
+        }))
+
+        if (isSupabaseConfigured()) {
+          await supabaseSync.deleteTask(id)
+        }
+
+        if (deletedTask) {
+          const state = get()
+          notifyWebhooks(state.webhooks, 'task', 'delete', deletedTask, getUpdateWebhook())
+
+          await get().addActivity({
+            userId: state.currentUser?.id || 'system',
+            type: 'task',
+            action: 'deleted',
+            entityId: deletedTask.id,
+            entityName: deletedTask.title,
+            description: `נמחקה משימה: ${deletedTask.title}`,
+          })
+        }
+      },
 
       // Product methods
-      addProduct: (product) =>
-        set((state) => {
-          const newProduct = {
-            ...product,
-            id: crypto.randomUUID(),
-            createdAt: new Date(),
+      addProduct: async (product) => {
+        const newProduct = {
+          ...product,
+          id: crypto.randomUUID(),
+          createdAt: new Date(),
+        }
+
+        set((state) => ({
+          products: [...state.products, newProduct],
+        }))
+
+        if (isSupabaseConfigured()) {
+          const created = await supabaseSync.createProduct(newProduct)
+          if (created) {
+            set((state) => ({
+              products: state.products.map(p => p.id === newProduct.id ? created : p),
+            }))
           }
+        }
 
-          notifyWebhooks(state.webhooks, 'product', 'create', newProduct, getUpdateWebhook())
-          syncToIntegrations(state.integrations, 'products', 'create', newProduct)
+        const state = get()
+        notifyWebhooks(state.webhooks, 'product', 'create', newProduct, getUpdateWebhook())
+        syncToIntegrations(state.integrations, 'products', 'create', newProduct)
+      },
 
-          return {
-            products: [...state.products, newProduct],
-          }
-        }),
+      updateProduct: async (id, product) => {
+        let updatedProduct: Product | null = null
 
-      updateProduct: (id, product) =>
         set((state) => {
-          let updatedProduct: Product | null = null
-
           const products = state.products.map((p) => {
             if (p.id === id) {
               const updated = { ...p, ...product }
@@ -271,49 +464,67 @@ export const useStore = create<CRMState>()(
             }
             return p
           })
-
-          if (updatedProduct) {
-            notifyWebhooks(state.webhooks, 'product', 'update', updatedProduct, getUpdateWebhook())
-            syncToIntegrations(state.integrations, 'products', 'update', updatedProduct)
-          }
-
           return { products }
-        }),
+        })
 
-      deleteProduct: (id) =>
-        set((state) => {
-          const deletedProduct = state.products.find((p) => p.id === id)
+        if (isSupabaseConfigured() && updatedProduct) {
+          await supabaseSync.updateProduct(id, product)
+        }
 
-          if (deletedProduct) {
-            notifyWebhooks(state.webhooks, 'product', 'delete', deletedProduct, getUpdateWebhook())
-          }
+        if (updatedProduct) {
+          const state = get()
+          notifyWebhooks(state.webhooks, 'product', 'update', updatedProduct, getUpdateWebhook())
+          syncToIntegrations(state.integrations, 'products', 'update', updatedProduct)
+        }
+      },
 
-          return {
-            products: state.products.filter((p) => p.id !== id),
-          }
-        }),
+      deleteProduct: async (id) => {
+        const deletedProduct = get().products.find((p) => p.id === id)
+
+        set((state) => ({
+          products: state.products.filter((p) => p.id !== id),
+        }))
+
+        if (isSupabaseConfigured()) {
+          await supabaseSync.deleteProduct(id)
+        }
+
+        if (deletedProduct) {
+          const state = get()
+          notifyWebhooks(state.webhooks, 'product', 'delete', deletedProduct, getUpdateWebhook())
+        }
+      },
 
       // Service methods
-      addService: (service) =>
-        set((state) => {
-          const newService = {
-            ...service,
-            id: crypto.randomUUID(),
-            createdAt: new Date(),
+      addService: async (service) => {
+        const newService = {
+          ...service,
+          id: crypto.randomUUID(),
+          createdAt: new Date(),
+        }
+
+        set((state) => ({
+          services: [...state.services, newService],
+        }))
+
+        if (isSupabaseConfigured()) {
+          const created = await supabaseSync.createService(newService)
+          if (created) {
+            set((state) => ({
+              services: state.services.map(s => s.id === newService.id ? created : s),
+            }))
           }
+        }
 
-          notifyWebhooks(state.webhooks, 'service', 'create', newService, getUpdateWebhook())
-          syncToIntegrations(state.integrations, 'services', 'create', newService)
+        const state = get()
+        notifyWebhooks(state.webhooks, 'service', 'create', newService, getUpdateWebhook())
+        syncToIntegrations(state.integrations, 'services', 'create', newService)
+      },
 
-          return {
-            services: [...state.services, newService],
-          }
-        }),
+      updateService: async (id, service) => {
+        let updatedService: Service | null = null
 
-      updateService: (id, service) =>
         set((state) => {
-          let updatedService: Service | null = null
-
           const services = state.services.map((s) => {
             if (s.id === id) {
               const updated = { ...s, ...service }
@@ -322,29 +533,38 @@ export const useStore = create<CRMState>()(
             }
             return s
           })
-
-          if (updatedService) {
-            notifyWebhooks(state.webhooks, 'service', 'update', updatedService, getUpdateWebhook())
-            syncToIntegrations(state.integrations, 'services', 'update', updatedService)
-          }
-
           return { services }
-        }),
+        })
 
-      deleteService: (id) =>
-        set((state) => {
-          const deletedService = state.services.find((s) => s.id === id)
+        if (isSupabaseConfigured() && updatedService) {
+          await supabaseSync.updateService(id, service)
+        }
 
-          if (deletedService) {
-            notifyWebhooks(state.webhooks, 'service', 'delete', deletedService, getUpdateWebhook())
-          }
+        if (updatedService) {
+          const state = get()
+          notifyWebhooks(state.webhooks, 'service', 'update', updatedService, getUpdateWebhook())
+          syncToIntegrations(state.integrations, 'services', 'update', updatedService)
+        }
+      },
 
-          return {
-            services: state.services.filter((s) => s.id !== id),
-          }
-        }),
+      deleteService: async (id) => {
+        const deletedService = get().services.find((s) => s.id === id)
 
-      // Webhook methods
+        set((state) => ({
+          services: state.services.filter((s) => s.id !== id),
+        }))
+
+        if (isSupabaseConfigured()) {
+          await supabaseSync.deleteService(id)
+        }
+
+        if (deletedService) {
+          const state = get()
+          notifyWebhooks(state.webhooks, 'service', 'delete', deletedService, getUpdateWebhook())
+        }
+      },
+
+      // Webhook methods (local only)
       addWebhook: (webhook) =>
         set((state) => ({
           webhooks: [
@@ -369,7 +589,7 @@ export const useStore = create<CRMState>()(
           webhooks: state.webhooks.filter((w) => w.id !== id),
         })),
 
-      // Integration methods
+      // Integration methods (local only)
       addIntegration: (integration) =>
         set((state) => ({
           integrations: [
@@ -394,7 +614,7 @@ export const useStore = create<CRMState>()(
           integrations: state.integrations.filter((i) => i.id !== id),
         })),
 
-      // User methods
+      // User methods (local only - managed by Supabase Auth)
       addUser: (user) =>
         set((state) => {
           const newUser = {
@@ -424,7 +644,7 @@ export const useStore = create<CRMState>()(
         set({ currentUser: user }),
 
       hasPermission: (permission) => {
-        const state = useStore.getState()
+        const state = get()
         const user = state.currentUser
 
         if (!user) return false
@@ -435,25 +655,27 @@ export const useStore = create<CRMState>()(
       },
 
       // Activity methods
-      addActivity: (activity) =>
-        set((state) => {
-          const newActivity = {
-            ...activity,
-            id: crypto.randomUUID(),
-            timestamp: new Date(),
-          }
+      addActivity: async (activity) => {
+        const newActivity = {
+          ...activity,
+          id: crypto.randomUUID(),
+          timestamp: new Date(),
+        }
 
-          return {
-            activities: [newActivity, ...state.activities].slice(0, 1000), // Keep last 1000 activities
-          }
-        }),
+        set((state) => ({
+          activities: [newActivity, ...state.activities].slice(0, 1000),
+        }))
+
+        if (isSupabaseConfigured()) {
+          await supabaseSync.createActivity(newActivity)
+        }
+      },
 
       getActivities: (limit = 50) =>
-        useStore.getState().activities.slice(0, limit),
+        get().activities.slice(0, limit),
 
       getUserActivities: (userId, limit = 50) =>
-        useStore
-          .getState()
+        get()
           .activities.filter((a) => a.userId === userId)
           .slice(0, limit),
     }),

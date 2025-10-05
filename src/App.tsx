@@ -17,14 +17,23 @@ import TeamManagement from './pages/TeamManagement'
 import ActivityFeed from './pages/ActivityFeed'
 import TeamPerformance from './pages/TeamPerformance'
 import { useAuthStore } from './store/useAuthStore'
+import { useStore } from './store/useStore'
 
 function App() {
   const { isAuthenticated, initializeAuth } = useAuthStore()
+  const loadAllData = useStore((state) => state.loadAllData)
 
   // Initialize Supabase auth on app load
   useEffect(() => {
     initializeAuth()
   }, [])
+
+  // Load data from Supabase when user is authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadAllData()
+    }
+  }, [isAuthenticated, loadAllData])
 
   return (
     <Router>
