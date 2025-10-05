@@ -4,7 +4,7 @@ import { format, formatDistanceToNow } from 'date-fns'
 import { he } from 'date-fns/locale'
 
 const ActivityFeed = () => {
-  const { activities, users, customers } = useStore()
+  const { activities, users } = useStore()
 
   const getActivityIcon = (type: string) => {
     switch (type) {

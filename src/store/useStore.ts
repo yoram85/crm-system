@@ -192,16 +192,17 @@ export const useStore = create<CRMState>()(
         // Send to webhooks and integrations
         if (updatedCustomer) {
           const state = get()
-          notifyWebhooks(state.webhooks, 'customer', 'update', updatedCustomer, getUpdateWebhook())
-          syncToIntegrations(state.integrations, 'customers', 'update', updatedCustomer)
+          const finalCustomer: Customer = updatedCustomer as Customer
+          notifyWebhooks(state.webhooks, 'customer', 'update', finalCustomer, getUpdateWebhook())
+          syncToIntegrations(state.integrations, 'customers', 'update', finalCustomer)
 
           await get().addActivity({
             userId: state.currentUser?.id || 'system',
             type: 'customer',
             action: 'updated',
-            entityId: updatedCustomer.id,
-            entityName: updatedCustomer.name,
-            description: `עודכן לקוח: ${updatedCustomer.name}`,
+            entityId: finalCustomer.id,
+            entityName: finalCustomer.name,
+            description: `עודכן לקוח: ${finalCustomer.name}`,
           })
         }
       },
@@ -290,16 +291,17 @@ export const useStore = create<CRMState>()(
 
         if (updatedDeal) {
           const state = get()
-          notifyWebhooks(state.webhooks, 'deal', 'update', updatedDeal, getUpdateWebhook())
-          syncToIntegrations(state.integrations, 'deals', 'update', updatedDeal)
+          const finalDeal: Deal = updatedDeal as Deal
+          notifyWebhooks(state.webhooks, 'deal', 'update', finalDeal, getUpdateWebhook())
+          syncToIntegrations(state.integrations, 'deals', 'update', finalDeal)
 
           await get().addActivity({
             userId: state.currentUser?.id || 'system',
             type: 'deal',
             action: 'updated',
-            entityId: updatedDeal.id,
-            entityName: updatedDeal.title,
-            description: `עודכנה עסקה: ${updatedDeal.title}`,
+            entityId: finalDeal.id,
+            entityName: finalDeal.title,
+            description: `עודכנה עסקה: ${finalDeal.title}`,
           })
         }
       },
@@ -386,16 +388,17 @@ export const useStore = create<CRMState>()(
 
         if (updatedTask) {
           const state = get()
-          notifyWebhooks(state.webhooks, 'task', 'update', updatedTask, getUpdateWebhook())
-          syncToIntegrations(state.integrations, 'tasks', 'update', updatedTask)
+          const finalTask: Task = updatedTask as Task
+          notifyWebhooks(state.webhooks, 'task', 'update', finalTask, getUpdateWebhook())
+          syncToIntegrations(state.integrations, 'tasks', 'update', finalTask)
 
           await get().addActivity({
             userId: state.currentUser?.id || 'system',
             type: 'task',
-            action: updatedTask.status === 'completed' ? 'completed' : 'updated',
-            entityId: updatedTask.id,
-            entityName: updatedTask.title,
-            description: `עודכנה משימה: ${updatedTask.title}`,
+            action: finalTask.status === 'completed' ? 'completed' : 'updated',
+            entityId: finalTask.id,
+            entityName: finalTask.title,
+            description: `עודכנה משימה: ${finalTask.title}`,
           })
         }
       },
