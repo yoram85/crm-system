@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Home, Users, DollarSign, CheckSquare, Package, Briefcase, FileText, Settings, Menu, X, LogOut, User as UserIcon } from 'lucide-react'
+import { Home, Users, DollarSign, CheckSquare, Package, Briefcase, FileText, Activity, Settings, Menu, X, LogOut, User as UserIcon } from 'lucide-react'
 import NotificationCenter from './NotificationCenter'
 import { useAuthStore } from '../store/useAuthStore'
 
@@ -27,6 +27,7 @@ const Layout = ({ children }: LayoutProps) => {
     { path: '/products', icon: Package, label: 'מוצרים' },
     { path: '/services', icon: Briefcase, label: 'שירותים' },
     { path: '/reports', icon: FileText, label: 'דוחות' },
+    { path: '/activity', icon: Activity, label: 'יומן פעילות' },
     { path: '/settings', icon: Settings, label: 'הגדרות' },
   ]
 

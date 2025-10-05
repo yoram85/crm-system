@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { Customer } from '../types';
-import { Plus, Edit2, Trash2, Phone, Mail, Building, Users, Upload, User, Search, Filter, Download } from 'lucide-react';
+import { Plus, Edit2, Trash2, Phone, Mail, Building, Users, Upload, User, Search, Filter, Download, Send } from 'lucide-react';
 import { exportCustomersToCSV } from '../utils/csvExport';
+import EmailComposer from '../components/EmailComposer';
 
 export default function Customers() {
   const { customers, addCustomer, updateCustomer, deleteCustomer } = useStore();
@@ -10,6 +11,8 @@ export default function Customers() {
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'lead'>('all');
+  const [emailComposerOpen, setEmailComposerOpen] = useState(false);
+  const [selectedCustomerForEmail, setSelectedCustomerForEmail] = useState<Customer | null>(null);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -72,6 +75,11 @@ export default function Customers() {
     if (window.confirm('האם אתה בטוח שברצונך למחוק לקוח זה?')) {
       deleteCustomer(id);
     }
+  };
+
+  const handleSendEmail = (customer: Customer) => {
+    setSelectedCustomerForEmail(customer);
+    setEmailComposerOpen(true);
   };
 
   const handleCloseModal = () => {
@@ -244,6 +252,13 @@ export default function Customers() {
                   </div>
                 </div>
                 <div className="flex gap-2">
+                  <button
+                    onClick={() => handleSendEmail(customer)}
+                    className="p-2 text-green-600 hover:bg-green-50 rounded"
+                    title="שלח אימייל"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
                   <button
                     onClick={() => handleEdit(customer)}
                     className="p-2 text-blue-600 hover:bg-blue-50 rounded"
@@ -432,6 +447,16 @@ export default function Customers() {
           </div>
         </div>
       )}
+
+      {/* Email Composer */}
+      <EmailComposer
+        isOpen={emailComposerOpen}
+        onClose={() => {
+          setEmailComposerOpen(false);
+          setSelectedCustomerForEmail(null);
+        }}
+        recipient={selectedCustomerForEmail || undefined}
+      />
     </div>
   );
 }

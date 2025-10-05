@@ -10,6 +10,7 @@ import Tasks from './pages/Tasks'
 import Products from './pages/Products'
 import Services from './pages/Services'
 import Reports from './pages/Reports'
+import ActivityLog from './pages/ActivityLog'
 import Settings from './pages/Settings'
 import { useAuthStore } from './store/useAuthStore'
 
@@ -57,6 +58,7 @@ function App() {
                     }
                   />
                   <Route path="/reports" element={<Reports />} />
+                  <Route path="/activity" element={<ActivityLog />} />
                   <Route
                     path="/settings"
                     element={
