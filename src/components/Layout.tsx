@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Home, Users, DollarSign, CheckSquare, Package, Briefcase, Settings, Menu, X } from 'lucide-react'
+import { Home, Users, DollarSign, CheckSquare, Package, Briefcase, FileText, Settings, Menu, X } from 'lucide-react'
 import NotificationCenter from './NotificationCenter'
 
 interface LayoutProps {
@@ -18,6 +18,7 @@ const Layout = ({ children }: LayoutProps) => {
     { path: '/tasks', icon: CheckSquare, label: 'משימות' },
     { path: '/products', icon: Package, label: 'מוצרים' },
     { path: '/services', icon: Briefcase, label: 'שירותים' },
+    { path: '/reports', icon: FileText, label: 'דוחות' },
     { path: '/settings', icon: Settings, label: 'הגדרות' },
   ]
 

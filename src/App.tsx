@@ -6,6 +6,7 @@ import Deals from './pages/Deals'
 import Tasks from './pages/Tasks'
 import Products from './pages/Products'
 import Services from './pages/Services'
+import Reports from './pages/Reports'
 import Settings from './pages/Settings'
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
           <Route path="/tasks" element={<Tasks />} />
           <Route path="/products" element={<Products />} />
           <Route path="/services" element={<Services />} />
+          <Route path="/reports" element={<Reports />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </Layout>
