@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <title>בדיקת PDF</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+  <button onclick="testPDF()">צור PDF פשוט</button>
+
+  <script>
+    function testPDF() {
+      try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        // Simple test without Hebrew font
+        doc.setFontSize(16);
+        doc.text('Test PDF - This is English', 105, 20, { align: 'center' });
+        doc.text('Testing numbers: 12345', 105, 30, { align: 'center' });
+
+        doc.save('test.pdf');
+        console.log('PDF created successfully!');
+      } catch (error) {
+        console.error('Error creating PDF:', error);
+        alert('שגיאה: ' + error.message);
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,9 +1,10 @@
 import { Navigate } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
+import { UserRole } from '../types'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
-  requiredRole?: 'admin' | 'user' | 'viewer'
+  requiredRole?: UserRole
 }
 
 const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
@@ -15,7 +16,13 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
 
   // Check role-based access
   if (requiredRole) {
-    const roleHierarchy = { admin: 3, user: 2, viewer: 1 }
+    const roleHierarchy: Record<UserRole, number> = {
+      admin: 5,
+      manager: 4,
+      sales: 3,
+      support: 2,
+      viewer: 1
+    }
     const userRoleLevel = roleHierarchy[user.role]
     const requiredRoleLevel = roleHierarchy[requiredRole]
 
@@ -28,7 +35,7 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
               אין לך הרשאה
             </h2>
             <p className="text-gray-600">
-              אין לך הרשאה לגשת לדף זה. נדרשת הרשאת {requiredRole === 'admin' ? 'מנהל' : 'משתמש'}.
+              אין לך הרשאה לגשת לדף זה.
             </p>
           </div>
         </div>

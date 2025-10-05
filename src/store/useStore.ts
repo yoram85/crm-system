@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { Customer, Deal, Task, Product, Service, WebhookConfig, IntegrationConfig } from '../types'
+import { Customer, Deal, Task, Product, Service, WebhookConfig, IntegrationConfig, User, Activity, Permission } from '../types'
 import { notifyWebhooks, syncToIntegrations } from '../utils/integrations'
 
 interface CRMState {
@@ -11,6 +11,9 @@ interface CRMState {
   services: Service[]
   webhooks: WebhookConfig[]
   integrations: IntegrationConfig[]
+  users: User[]
+  activities: Activity[]
+  currentUser: User | null
 
   // Customer methods
   addCustomer: (customer: Omit<Customer, 'id' | 'createdAt'>) => void
@@ -46,6 +49,18 @@ interface CRMState {
   addIntegration: (integration: Omit<IntegrationConfig, 'id' | 'createdAt'>) => void
   updateIntegration: (id: string, integration: Partial<IntegrationConfig>) => void
   deleteIntegration: (id: string) => void
+
+  // User methods
+  addUser: (user: Omit<User, 'id' | 'createdAt'>) => void
+  updateUser: (id: string, user: Partial<User>) => void
+  deleteUser: (id: string) => void
+  setCurrentUser: (user: User | null) => void
+  hasPermission: (permission: Permission) => boolean
+
+  // Activity methods
+  addActivity: (activity: Omit<Activity, 'id' | 'timestamp'>) => void
+  getActivities: (limit?: number) => Activity[]
+  getUserActivities: (userId: string, limit?: number) => Activity[]
 }
 
 // Helper to get updateWebhook function
@@ -63,6 +78,9 @@ export const useStore = create<CRMState>()(
       services: [],
       webhooks: [],
       integrations: [],
+      users: [],
+      activities: [],
+      currentUser: null,
 
       // Customer methods
       addCustomer: (customer) =>
@@ -375,6 +393,69 @@ export const useStore = create<CRMState>()(
         set((state) => ({
           integrations: state.integrations.filter((i) => i.id !== id),
         })),
+
+      // User methods
+      addUser: (user) =>
+        set((state) => {
+          const newUser = {
+            ...user,
+            id: crypto.randomUUID(),
+            createdAt: new Date(),
+          }
+
+          return {
+            users: [...state.users, newUser],
+          }
+        }),
+
+      updateUser: (id, user) =>
+        set((state) => ({
+          users: state.users.map((u) =>
+            u.id === id ? { ...u, ...user } : u
+          ),
+        })),
+
+      deleteUser: (id) =>
+        set((state) => ({
+          users: state.users.filter((u) => u.id !== id),
+        })),
+
+      setCurrentUser: (user) =>
+        set({ currentUser: user }),
+
+      hasPermission: (permission) => {
+        const state = useStore.getState()
+        const user = state.currentUser
+
+        if (!user) return false
+        if (user.role === 'admin') return true
+        if (user.permissions?.includes(permission)) return true
+
+        return false
+      },
+
+      // Activity methods
+      addActivity: (activity) =>
+        set((state) => {
+          const newActivity = {
+            ...activity,
+            id: crypto.randomUUID(),
+            timestamp: new Date(),
+          }
+
+          return {
+            activities: [newActivity, ...state.activities].slice(0, 1000), // Keep last 1000 activities
+          }
+        }),
+
+      getActivities: (limit = 50) =>
+        useStore.getState().activities.slice(0, limit),
+
+      getUserActivities: (userId, limit = 50) =>
+        useStore
+          .getState()
+          .activities.filter((a) => a.userId === userId)
+          .slice(0, limit),
     }),
     {
       name: 'crm-storage',

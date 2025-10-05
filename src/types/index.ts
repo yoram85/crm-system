@@ -131,17 +131,67 @@ export interface AirtableConfig {
   }
 }
 
+export type UserRole = 'admin' | 'manager' | 'sales' | 'support' | 'viewer'
+
+export type Permission =
+  | 'customers.view' | 'customers.create' | 'customers.edit' | 'customers.delete'
+  | 'deals.view' | 'deals.create' | 'deals.edit' | 'deals.delete'
+  | 'tasks.view' | 'tasks.create' | 'tasks.edit' | 'tasks.delete'
+  | 'products.view' | 'products.create' | 'products.edit' | 'products.delete'
+  | 'reports.view' | 'reports.export'
+  | 'team.view' | 'team.manage'
+  | 'settings.view' | 'settings.edit'
+
 export interface User {
   id: string
   email: string
   firstName: string
   lastName: string
-  role: 'admin' | 'user' | 'viewer'
+  role: UserRole
+  avatar?: string
+  phone?: string
+  department?: string
+  status: 'active' | 'inactive' | 'pending'
+  permissions?: Permission[]
   createdAt: Date
   lastLogin?: Date
+  assignedCustomers?: string[] // IDs של לקוחות שמוקצים למשתמש
+  monthlyTarget?: number // יעד מכירות חודשי
 }
 
 export interface AuthState {
   user: User | null
   isAuthenticated: boolean
+}
+
+export interface Activity {
+  id: string
+  userId: string
+  type: 'customer' | 'deal' | 'task' | 'product' | 'service' | 'user'
+  action: 'created' | 'updated' | 'deleted' | 'completed' | 'assigned'
+  entityId: string
+  entityName: string
+  description: string
+  metadata?: Record<string, any>
+  timestamp: Date
+}
+
+export interface TeamPerformance {
+  userId: string
+  deals: {
+    total: number
+    won: number
+    lost: number
+    value: number
+  }
+  tasks: {
+    completed: number
+    pending: number
+    overdue: number
+  }
+  customers: {
+    total: number
+    active: number
+  }
+  lastActivityDate: Date
 }

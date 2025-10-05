@@ -12,6 +12,9 @@ import Services from './pages/Services'
 import Reports from './pages/Reports'
 import ActivityLog from './pages/ActivityLog'
 import Settings from './pages/Settings'
+import TeamManagement from './pages/TeamManagement'
+import ActivityFeed from './pages/ActivityFeed'
+import TeamPerformance from './pages/TeamPerformance'
 import { useAuthStore } from './store/useAuthStore'
 
 function App() {
@@ -41,24 +44,13 @@ function App() {
                   <Route path="/customers" element={<Customers />} />
                   <Route path="/deals" element={<Deals />} />
                   <Route path="/tasks" element={<Tasks />} />
-                  <Route
-                    path="/products"
-                    element={
-                      <ProtectedRoute requiredRole="user">
-                        <Products />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/services"
-                    element={
-                      <ProtectedRoute requiredRole="user">
-                        <Services />
-                      </ProtectedRoute>
-                    }
-                  />
+                  <Route path="/products" element={<Products />} />
+                  <Route path="/services" element={<Services />} />
                   <Route path="/reports" element={<Reports />} />
                   <Route path="/activity" element={<ActivityLog />} />
+                  <Route path="/team" element={<TeamManagement />} />
+                  <Route path="/team/activity" element={<ActivityFeed />} />
+                  <Route path="/team/performance" element={<TeamPerformance />} />
                   <Route
                     path="/settings"
                     element={
