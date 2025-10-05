@@ -2,6 +2,62 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { Customer, Deal, Task, Product, Service } from '../types'
 import { format } from 'date-fns'
+import { hebrewFontBase64 } from './hebrewFont'
+
+// Reverse Hebrew text for proper RTL display in PDF
+const reverseHebrewText = (text: string): string => {
+  if (!text) return text
+
+  // Helper function to check if character is Hebrew
+  const isHebrew = (char: string) => /[\u0590-\u05FF]/.test(char)
+
+  // Helper function to check if character is a number or Latin
+  const isLatin = (char: string) => /[a-zA-Z0-9]/.test(char)
+
+  const chars = text.split('')
+  let result: string[] = []
+  let hebrewBuffer: string[] = []
+  let latinBuffer: string[] = []
+
+  const flushHebrew = () => {
+    if (hebrewBuffer.length > 0) {
+      result.push(...hebrewBuffer.reverse())
+      hebrewBuffer = []
+    }
+  }
+
+  const flushLatin = () => {
+    if (latinBuffer.length > 0) {
+      result.push(...latinBuffer)
+      latinBuffer = []
+    }
+  }
+
+  // Process each character
+  for (let i = 0; i < chars.length; i++) {
+    const char = chars[i]
+
+    if (isHebrew(char)) {
+      flushLatin()
+      hebrewBuffer.push(char)
+    } else if (isLatin(char)) {
+      flushHebrew()
+      latinBuffer.push(char)
+    } else {
+      // Special characters (spaces, punctuation)
+      flushHebrew()
+      flushLatin()
+      result.push(char)
+    }
+  }
+
+  // Flush remaining buffers
+  flushHebrew()
+  flushLatin()
+
+  // Reverse the entire result for RTL
+  return result.reverse().join('')
+}
 
 // Configure jsPDF for RTL and Hebrew support
 const createPDF = () => {
@@ -11,19 +67,21 @@ const createPDF = () => {
     format: 'a4',
   })
 
-  // Add Hebrew font support (using Arial Unicode MS or similar)
-  // Note: For full Hebrew support, you'd need to add a Hebrew font
-  // For now, we'll use the default font
+  // Add Hebrew font support (Rubik font)
+  doc.addFileToVFS('Rubik-Regular.ttf', hebrewFontBase64)
+  doc.addFont('Rubik-Regular.ttf', 'Rubik', 'normal')
+  doc.setFont('Rubik')
 
   return doc
 }
 
 const addHeader = (doc: jsPDF, title: string) => {
   doc.setFontSize(18)
-  doc.text(title, 105, 20, { align: 'center' })
+  doc.text(reverseHebrewText(title), 105, 20, { align: 'center' })
 
   doc.setFontSize(10)
-  doc.text(`תאריך: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 105, 28, {
+  const dateText = `תאריך: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`
+  doc.text(reverseHebrewText(dateText), 105, 28, {
     align: 'center',
   })
 
@@ -36,27 +94,34 @@ export const exportCustomersToPDF = (customers: Customer[]) => {
   addHeader(doc, 'דוח לקוחות')
 
   const tableData = customers.map((customer) => [
-    customer.name,
+    reverseHebrewText(customer.name),
     customer.email,
     customer.phone,
-    customer.company,
-    customer.status === 'active' ? 'פעיל' : customer.status === 'lead' ? 'ליד' : 'לא פעיל',
+    reverseHebrewText(customer.company),
+    reverseHebrewText(customer.status === 'active' ? 'פעיל' : customer.status === 'lead' ? 'ליד' : 'לא פעיל'),
     format(new Date(customer.createdAt), 'dd/MM/yyyy'),
   ])
 
   autoTable(doc, {
     startY: 38,
-    head: [['שם', 'אימייל', 'טלפון', 'חברה', 'סטטוס', 'תאריך יצירה']],
+    head: [[
+      reverseHebrewText('שם'),
+      reverseHebrewText('אימייל'),
+      reverseHebrewText('טלפון'),
+      reverseHebrewText('חברה'),
+      reverseHebrewText('סטטוס'),
+      reverseHebrewText('תאריך יצירה')
+    ]],
     body: tableData,
     styles: {
-      font: 'helvetica',
+      font: 'Rubik',
       fontSize: 9,
       halign: 'right',
     },
     headStyles: {
       fillColor: [59, 130, 246],
       textColor: 255,
-      fontStyle: 'bold',
+      font: 'Rubik',
     },
     alternateRowStyles: {
       fillColor: [245, 247, 250],
@@ -66,19 +131,21 @@ export const exportCustomersToPDF = (customers: Customer[]) => {
   // Add summary
   const finalY = (doc as any).lastAutoTable.finalY || 38
   doc.setFontSize(10)
-  doc.text(`סך הכל לקוחות: ${customers.length}`, 15, finalY + 10)
+  doc.text(reverseHebrewText(`סך הכל לקוחות: ${customers.length}`), 195, finalY + 10, { align: 'right' })
   doc.text(
-    `לקוחות פעילים: ${customers.filter((c) => c.status === 'active').length}`,
-    15,
-    finalY + 16
+    reverseHebrewText(`לקוחות פעילים: ${customers.filter((c) => c.status === 'active').length}`),
+    195,
+    finalY + 16,
+    { align: 'right' }
   )
   doc.text(
-    `לידים: ${customers.filter((c) => c.status === 'lead').length}`,
-    15,
-    finalY + 22
+    reverseHebrewText(`לידים: ${customers.filter((c) => c.status === 'lead').length}`),
+    195,
+    finalY + 22,
+    { align: 'right' }
   )
 
-  doc.save(`לקוחות_${format(new Date(), 'dd-MM-yyyy')}.pdf`)
+  doc.save(reverseHebrewText(`לקוחות_${format(new Date(), 'dd-MM-yyyy')}.pdf`))
 }
 
 export const exportDealsToPDF = (deals: Deal[], customers: Customer[]) => {
@@ -88,10 +155,10 @@ export const exportDealsToPDF = (deals: Deal[], customers: Customer[]) => {
   const tableData = deals.map((deal) => {
     const customer = customers.find((c) => c.id === deal.customerId)
     return [
-      deal.title,
-      customer?.name || 'לא ידוע',
+      reverseHebrewText(deal.title),
+      reverseHebrewText(customer?.name || 'לא ידוע'),
       `₪${deal.amount.toLocaleString()}`,
-      deal.stage === 'lead'
+      reverseHebrewText(deal.stage === 'lead'
         ? 'ליד'
         : deal.stage === 'proposal'
         ? 'הצעת מחיר'
@@ -99,7 +166,7 @@ export const exportDealsToPDF = (deals: Deal[], customers: Customer[]) => {
         ? 'משא ומתן'
         : deal.stage === 'won'
         ? 'נסגר בהצלחה'
-        : 'אבוד',
+        : 'אבוד'),
       `${deal.probability}%`,
       format(new Date(deal.expectedCloseDate), 'dd/MM/yyyy'),
     ]
@@ -107,17 +174,24 @@ export const exportDealsToPDF = (deals: Deal[], customers: Customer[]) => {
 
   autoTable(doc, {
     startY: 38,
-    head: [['כותרת', 'לקוח', 'סכום', 'שלב', 'סבירות', 'תאריך סגירה']],
+    head: [[
+      reverseHebrewText('כותרת'),
+      reverseHebrewText('לקוח'),
+      reverseHebrewText('סכום'),
+      reverseHebrewText('שלב'),
+      reverseHebrewText('סבירות'),
+      reverseHebrewText('תאריך סגירה')
+    ]],
     body: tableData,
     styles: {
-      font: 'helvetica',
+      font: 'Rubik',
       fontSize: 9,
       halign: 'right',
     },
     headStyles: {
       fillColor: [59, 130, 246],
       textColor: 255,
-      fontStyle: 'bold',
+      font: 'Rubik',
     },
     alternateRowStyles: {
       fillColor: [245, 247, 250],
@@ -132,16 +206,17 @@ export const exportDealsToPDF = (deals: Deal[], customers: Customer[]) => {
     .reduce((sum, deal) => sum + deal.amount, 0)
 
   doc.setFontSize(10)
-  doc.text(`סך הכל עסקאות: ${deals.length}`, 15, finalY + 10)
-  doc.text(`סכום כולל: ₪${totalAmount.toLocaleString()}`, 15, finalY + 16)
+  doc.text(reverseHebrewText(`סך הכל עסקאות: ${deals.length}`), 195, finalY + 10, { align: 'right' })
+  doc.text(reverseHebrewText(`סכום כולל: ₪${totalAmount.toLocaleString()}`), 195, finalY + 16, { align: 'right' })
   doc.text(
-    `עסקאות שנסגרו: ${deals.filter((d) => d.stage === 'won').length}`,
-    15,
-    finalY + 22
+    reverseHebrewText(`עסקאות שנסגרו: ${deals.filter((d) => d.stage === 'won').length}`),
+    195,
+    finalY + 22,
+    { align: 'right' }
   )
-  doc.text(`הכנסות: ₪${wonAmount.toLocaleString()}`, 15, finalY + 28)
+  doc.text(reverseHebrewText(`הכנסות: ₪${wonAmount.toLocaleString()}`), 195, finalY + 28, { align: 'right' })
 
-  doc.save(`עסקאות_${format(new Date(), 'dd-MM-yyyy')}.pdf`)
+  doc.save(reverseHebrewText(`עסקאות_${format(new Date(), 'dd-MM-yyyy')}.pdf`))
 }
 
 export const exportTasksToPDF = (tasks: Task[], customers: Customer[]) => {
@@ -151,36 +226,43 @@ export const exportTasksToPDF = (tasks: Task[], customers: Customer[]) => {
   const tableData = tasks.map((task) => {
     const customer = customers.find((c) => c.id === task.customerId)
     return [
-      task.title,
-      task.description,
-      customer?.name || '',
-      task.status === 'pending'
+      reverseHebrewText(task.title),
+      reverseHebrewText(task.description),
+      reverseHebrewText(customer?.name || ''),
+      reverseHebrewText(task.status === 'pending'
         ? 'ממתין'
         : task.status === 'in-progress'
         ? 'בתהליך'
-        : 'הושלם',
-      task.priority === 'high'
+        : 'הושלם'),
+      reverseHebrewText(task.priority === 'high'
         ? 'גבוהה'
         : task.priority === 'medium'
         ? 'בינונית'
-        : 'נמוכה',
+        : 'נמוכה'),
       format(new Date(task.dueDate), 'dd/MM/yyyy'),
     ]
   })
 
   autoTable(doc, {
     startY: 38,
-    head: [['כותרת', 'תיאור', 'לקוח', 'סטטוס', 'עדיפות', 'תאריך יעד']],
+    head: [[
+      reverseHebrewText('כותרת'),
+      reverseHebrewText('תיאור'),
+      reverseHebrewText('לקוח'),
+      reverseHebrewText('סטטוס'),
+      reverseHebrewText('עדיפות'),
+      reverseHebrewText('תאריך יעד')
+    ]],
     body: tableData,
     styles: {
-      font: 'helvetica',
+      font: 'Rubik',
       fontSize: 8,
       halign: 'right',
     },
     headStyles: {
       fillColor: [59, 130, 246],
       textColor: 255,
-      fontStyle: 'bold',
+      font: 'Rubik',
     },
     alternateRowStyles: {
       fillColor: [245, 247, 250],
@@ -193,24 +275,27 @@ export const exportTasksToPDF = (tasks: Task[], customers: Customer[]) => {
   // Add summary
   const finalY = (doc as any).lastAutoTable.finalY || 38
   doc.setFontSize(10)
-  doc.text(`סך הכל משימות: ${tasks.length}`, 15, finalY + 10)
+  doc.text(reverseHebrewText(`סך הכל משימות: ${tasks.length}`), 195, finalY + 10, { align: 'right' })
   doc.text(
-    `הושלמו: ${tasks.filter((t) => t.status === 'completed').length}`,
-    15,
-    finalY + 16
+    reverseHebrewText(`הושלמו: ${tasks.filter((t) => t.status === 'completed').length}`),
+    195,
+    finalY + 16,
+    { align: 'right' }
   )
   doc.text(
-    `בתהליך: ${tasks.filter((t) => t.status === 'in-progress').length}`,
-    15,
-    finalY + 22
+    reverseHebrewText(`בתהליך: ${tasks.filter((t) => t.status === 'in-progress').length}`),
+    195,
+    finalY + 22,
+    { align: 'right' }
   )
   doc.text(
-    `ממתינות: ${tasks.filter((t) => t.status === 'pending').length}`,
-    15,
-    finalY + 28
+    reverseHebrewText(`ממתינות: ${tasks.filter((t) => t.status === 'pending').length}`),
+    195,
+    finalY + 28,
+    { align: 'right' }
   )
 
-  doc.save(`משימות_${format(new Date(), 'dd-MM-yyyy')}.pdf`)
+  doc.save(reverseHebrewText(`משימות_${format(new Date(), 'dd-MM-yyyy')}.pdf`))
 }
 
 export const exportProductsToPDF = (products: Product[]) => {
@@ -218,26 +303,32 @@ export const exportProductsToPDF = (products: Product[]) => {
   addHeader(doc, 'דוח מוצרים')
 
   const tableData = products.map((product) => [
-    product.name,
-    product.description,
+    reverseHebrewText(product.name),
+    reverseHebrewText(product.description),
     `₪${product.price.toLocaleString()}`,
-    product.category,
+    reverseHebrewText(product.category),
     product.stock.toString(),
   ])
 
   autoTable(doc, {
     startY: 38,
-    head: [['שם', 'תיאור', 'מחיר', 'קטגוריה', 'מלאי']],
+    head: [[
+      reverseHebrewText('שם'),
+      reverseHebrewText('תיאור'),
+      reverseHebrewText('מחיר'),
+      reverseHebrewText('קטגוריה'),
+      reverseHebrewText('מלאי')
+    ]],
     body: tableData,
     styles: {
-      font: 'helvetica',
+      font: 'Rubik',
       fontSize: 9,
       halign: 'right',
     },
     headStyles: {
       fillColor: [59, 130, 246],
       textColor: 255,
-      fontStyle: 'bold',
+      font: 'Rubik',
     },
     alternateRowStyles: {
       fillColor: [245, 247, 250],
@@ -249,10 +340,10 @@ export const exportProductsToPDF = (products: Product[]) => {
   const totalValue = products.reduce((sum, p) => sum + p.price * p.stock, 0)
 
   doc.setFontSize(10)
-  doc.text(`סך הכל מוצרים: ${products.length}`, 15, finalY + 10)
-  doc.text(`ערך מלאי: ₪${totalValue.toLocaleString()}`, 15, finalY + 16)
+  doc.text(reverseHebrewText(`סך הכל מוצרים: ${products.length}`), 195, finalY + 10, { align: 'right' })
+  doc.text(reverseHebrewText(`ערך מלאי: ₪${totalValue.toLocaleString()}`), 195, finalY + 16, { align: 'right' })
 
-  doc.save(`מוצרים_${format(new Date(), 'dd-MM-yyyy')}.pdf`)
+  doc.save(reverseHebrewText(`מוצרים_${format(new Date(), 'dd-MM-yyyy')}.pdf`))
 }
 
 export const exportServicesToPDF = (services: Service[]) => {
@@ -260,26 +351,32 @@ export const exportServicesToPDF = (services: Service[]) => {
   addHeader(doc, 'דוח שירותים')
 
   const tableData = services.map((service) => [
-    service.name,
-    service.description,
+    reverseHebrewText(service.name),
+    reverseHebrewText(service.description),
     `₪${service.price.toLocaleString()}`,
-    service.category,
-    `${service.duration} דקות`,
+    reverseHebrewText(service.category),
+    reverseHebrewText(`${service.duration} דקות`),
   ])
 
   autoTable(doc, {
     startY: 38,
-    head: [['שם', 'תיאור', 'מחיר', 'קטגוריה', 'משך']],
+    head: [[
+      reverseHebrewText('שם'),
+      reverseHebrewText('תיאור'),
+      reverseHebrewText('מחיר'),
+      reverseHebrewText('קטגוריה'),
+      reverseHebrewText('משך')
+    ]],
     body: tableData,
     styles: {
-      font: 'helvetica',
+      font: 'Rubik',
       fontSize: 9,
       halign: 'right',
     },
     headStyles: {
       fillColor: [59, 130, 246],
       textColor: 255,
-      fontStyle: 'bold',
+      font: 'Rubik',
     },
     alternateRowStyles: {
       fillColor: [245, 247, 250],
@@ -289,9 +386,9 @@ export const exportServicesToPDF = (services: Service[]) => {
   // Add summary
   const finalY = (doc as any).lastAutoTable.finalY || 38
   doc.setFontSize(10)
-  doc.text(`סך הכל שירותים: ${services.length}`, 15, finalY + 10)
+  doc.text(reverseHebrewText(`סך הכל שירותים: ${services.length}`), 195, finalY + 10, { align: 'right' })
 
-  doc.save(`שירותים_${format(new Date(), 'dd-MM-yyyy')}.pdf`)
+  doc.save(reverseHebrewText(`שירותים_${format(new Date(), 'dd-MM-yyyy')}.pdf`))
 }
 
 // Comprehensive business report
@@ -309,31 +406,33 @@ export const exportComprehensiveReport = (
 
   // Customers Summary
   doc.setFontSize(14)
-  doc.setFont('helvetica', 'bold')
-  doc.text('סיכום לקוחות', 105, currentY, { align: 'center' })
+  doc.setFont('Rubik', 'normal')
+  doc.text(reverseHebrewText('סיכום לקוחות'), 105, currentY, { align: 'center' })
   currentY += 8
 
   doc.setFontSize(10)
-  doc.setFont('helvetica', 'normal')
-  doc.text(`סך הכל לקוחות: ${customers.length}`, 15, currentY)
+  doc.setFont('Rubik', 'normal')
+  doc.text(reverseHebrewText(`סך הכל לקוחות: ${customers.length}`), 195, currentY, { align: 'right' })
   currentY += 6
   doc.text(
-    `לקוחות פעילים: ${customers.filter((c) => c.status === 'active').length}`,
-    15,
-    currentY
+    reverseHebrewText(`לקוחות פעילים: ${customers.filter((c) => c.status === 'active').length}`),
+    195,
+    currentY,
+    { align: 'right' }
   )
   currentY += 6
   doc.text(
-    `לידים: ${customers.filter((c) => c.status === 'lead').length}`,
-    15,
-    currentY
+    reverseHebrewText(`לידים: ${customers.filter((c) => c.status === 'lead').length}`),
+    195,
+    currentY,
+    { align: 'right' }
   )
   currentY += 12
 
   // Deals Summary
   doc.setFontSize(14)
-  doc.setFont('helvetica', 'bold')
-  doc.text('סיכום עסקאות', 105, currentY, { align: 'center' })
+  doc.setFont('Rubik', 'normal')
+  doc.text(reverseHebrewText('סיכום עסקאות'), 105, currentY, { align: 'center' })
   currentY += 8
 
   const totalDealsAmount = deals.reduce((sum, deal) => sum + deal.amount, 0)
@@ -342,64 +441,68 @@ export const exportComprehensiveReport = (
     .reduce((sum, deal) => sum + deal.amount, 0)
 
   doc.setFontSize(10)
-  doc.setFont('helvetica', 'normal')
-  doc.text(`סך הכל עסקאות: ${deals.length}`, 15, currentY)
+  doc.setFont('Rubik', 'normal')
+  doc.text(reverseHebrewText(`סך הכל עסקאות: ${deals.length}`), 195, currentY, { align: 'right' })
   currentY += 6
-  doc.text(`סכום כולל: ₪${totalDealsAmount.toLocaleString()}`, 15, currentY)
+  doc.text(reverseHebrewText(`סכום כולל: ₪${totalDealsAmount.toLocaleString()}`), 195, currentY, { align: 'right' })
   currentY += 6
   doc.text(
-    `עסקאות שנסגרו: ${deals.filter((d) => d.stage === 'won').length}`,
-    15,
-    currentY
+    reverseHebrewText(`עסקאות שנסגרו: ${deals.filter((d) => d.stage === 'won').length}`),
+    195,
+    currentY,
+    { align: 'right' }
   )
   currentY += 6
-  doc.text(`הכנסות: ₪${wonDealsAmount.toLocaleString()}`, 15, currentY)
+  doc.text(reverseHebrewText(`הכנסות: ₪${wonDealsAmount.toLocaleString()}`), 195, currentY, { align: 'right' })
   currentY += 12
 
   // Tasks Summary
   doc.setFontSize(14)
-  doc.setFont('helvetica', 'bold')
-  doc.text('סיכום משימות', 105, currentY, { align: 'center' })
+  doc.setFont('Rubik', 'normal')
+  doc.text(reverseHebrewText('סיכום משימות'), 105, currentY, { align: 'center' })
   currentY += 8
 
   doc.setFontSize(10)
-  doc.setFont('helvetica', 'normal')
-  doc.text(`סך הכל משימות: ${tasks.length}`, 15, currentY)
+  doc.setFont('Rubik', 'normal')
+  doc.text(reverseHebrewText(`סך הכל משימות: ${tasks.length}`), 195, currentY, { align: 'right' })
   currentY += 6
   doc.text(
-    `הושלמו: ${tasks.filter((t) => t.status === 'completed').length}`,
-    15,
-    currentY
+    reverseHebrewText(`הושלמו: ${tasks.filter((t) => t.status === 'completed').length}`),
+    195,
+    currentY,
+    { align: 'right' }
   )
   currentY += 6
   doc.text(
-    `בתהליך: ${tasks.filter((t) => t.status === 'in-progress').length}`,
-    15,
-    currentY
+    reverseHebrewText(`בתהליך: ${tasks.filter((t) => t.status === 'in-progress').length}`),
+    195,
+    currentY,
+    { align: 'right' }
   )
   currentY += 6
   doc.text(
-    `ממתינות: ${tasks.filter((t) => t.status === 'pending').length}`,
-    15,
-    currentY
+    reverseHebrewText(`ממתינות: ${tasks.filter((t) => t.status === 'pending').length}`),
+    195,
+    currentY,
+    { align: 'right' }
   )
   currentY += 12
 
   // Products & Services Summary
   doc.setFontSize(14)
-  doc.setFont('helvetica', 'bold')
-  doc.text('סיכום מוצרים ושירותים', 105, currentY, { align: 'center' })
+  doc.setFont('Rubik', 'normal')
+  doc.text(reverseHebrewText('סיכום מוצרים ושירותים'), 105, currentY, { align: 'center' })
   currentY += 8
 
   const productsValue = products.reduce((sum, p) => sum + p.price * p.stock, 0)
 
   doc.setFontSize(10)
-  doc.setFont('helvetica', 'normal')
-  doc.text(`מוצרים: ${products.length}`, 15, currentY)
+  doc.setFont('Rubik', 'normal')
+  doc.text(reverseHebrewText(`מוצרים: ${products.length}`), 195, currentY, { align: 'right' })
   currentY += 6
-  doc.text(`ערך מלאי: ₪${productsValue.toLocaleString()}`, 15, currentY)
+  doc.text(reverseHebrewText(`ערך מלאי: ₪${productsValue.toLocaleString()}`), 195, currentY, { align: 'right' })
   currentY += 6
-  doc.text(`שירותים: ${services.length}`, 15, currentY)
+  doc.text(reverseHebrewText(`שירותים: ${services.length}`), 195, currentY, { align: 'right' })
 
-  doc.save(`דוח_עסקי_מקיף_${format(new Date(), 'dd-MM-yyyy')}.pdf`)
+  doc.save(reverseHebrewText(`דוח_עסקי_מקיף_${format(new Date(), 'dd-MM-yyyy')}.pdf`))
 }
