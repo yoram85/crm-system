@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useStore } from '../store/useStore'
-import { Plus, Edit2, Trash2, Briefcase, Clock } from 'lucide-react'
+import { Plus, Edit2, Trash2, Briefcase, Clock, Download } from 'lucide-react'
 import { Service } from '../types'
+import { exportServicesToCSV } from '../utils/csvExport'
 
 const Services = () => {
   const { services, addService, updateService, deleteService } = useStore()
@@ -53,13 +54,22 @@ const Services = () => {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">ניהול שירותים</h1>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Plus size={20} />
-          שירות חדש
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => exportServicesToCSV(services)}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+          >
+            <Download size={20} />
+            ייצוא CSV
+          </button>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Plus size={20} />
+            שירות חדש
+          </button>
+        </div>
       </div>
 
       {/* Services Grid */}

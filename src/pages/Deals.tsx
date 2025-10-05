@@ -1,13 +1,17 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useStore } from '../store/useStore'
-import { Plus, Edit2, Trash2, DollarSign, TrendingUp } from 'lucide-react'
-import { Deal } from '../types'
+import { Plus, Edit2, Trash2, DollarSign, TrendingUp, Search, Filter, Download } from 'lucide-react'
+import { Deal, DealItem } from '../types'
 import { format } from 'date-fns'
+import DealItemsSelector from '../components/DealItemsSelector'
+import { exportDealsToCSV } from '../utils/csvExport'
 
 const Deals = () => {
-  const { deals, customers, addDeal, updateDeal, deleteDeal } = useStore()
+  const { deals, customers, products, services, addDeal, updateDeal, deleteDeal } = useStore()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [stageFilter, setStageFilter] = useState<'all' | 'lead' | 'proposal' | 'negotiation' | 'won' | 'lost'>('all')
   const [formData, setFormData] = useState<{
     title: string
     customerId: string
@@ -16,6 +20,7 @@ const Deals = () => {
     probability: number
     expectedCloseDate: string
     notes: string
+    items: DealItem[]
   }>({
     title: '',
     customerId: '',
@@ -24,7 +29,20 @@ const Deals = () => {
     probability: 50,
     expectedCloseDate: new Date().toISOString().split('T')[0],
     notes: '',
+    items: [],
   })
+
+  // חישוב אוטומטי של סכום העסקה מהפריטים
+  useEffect(() => {
+    if (formData.items.length > 0) {
+      const total = formData.items.reduce((sum, item) => {
+        const subtotal = item.price * item.quantity
+        const discount = item.discount || 0
+        return sum + (subtotal - (subtotal * discount / 100))
+      }, 0)
+      setFormData(prev => ({ ...prev, amount: Math.round(total * 100) / 100 }))
+    }
+  }, [formData.items])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -48,6 +66,7 @@ const Deals = () => {
       amount: 0,
       stage: 'lead',
       probability: 50,
+      items: [],
       expectedCloseDate: new Date().toISOString().split('T')[0],
       notes: '',
     })
@@ -65,6 +84,7 @@ const Deals = () => {
       probability: deal.probability,
       expectedCloseDate: format(new Date(deal.expectedCloseDate), 'yyyy-MM-dd'),
       notes: deal.notes,
+      items: deal.items || [],
     })
     setIsModalOpen(true)
   }
@@ -108,22 +128,75 @@ const Deals = () => {
     return customer?.name || 'לא ידוע'
   }
 
+  // Filter and search deals
+  const filteredDeals = deals.filter(deal => {
+    const customerName = getCustomerName(deal.customerId)
+    const matchesSearch =
+      deal.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      deal.notes.toLowerCase().includes(searchQuery.toLowerCase())
+
+    const matchesStage = stageFilter === 'all' || deal.stage === stageFilter
+
+    return matchesSearch && matchesStage
+  })
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">ניהול עסקאות</h1>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Plus size={20} />
-          עסקה חדשה
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => exportDealsToCSV(deals, customers)}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+          >
+            <Download size={20} />
+            ייצוא CSV
+          </button>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Plus size={20} />
+            עסקה חדשה
+          </button>
+        </div>
+      </div>
+
+      {/* Search and Filter */}
+      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="relative">
+            <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <input
+              type="text"
+              placeholder="חיפוש לפי כותרת, לקוח או הערות..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          <div className="relative">
+            <Filter className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <select
+              value={stageFilter}
+              onChange={(e) => setStageFilter(e.target.value as any)}
+              className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
+            >
+              <option value="all">כל השלבים</option>
+              <option value="lead">ליד</option>
+              <option value="proposal">הצעת מחיר</option>
+              <option value="negotiation">משא ומתן</option>
+              <option value="won">נסגר בהצלחה</option>
+              <option value="lost">אבוד</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Deals Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {deals.map((deal) => (
+        {filteredDeals.map((deal) => (
           <div key={deal.id} className="card hover:shadow-lg transition-shadow">
             <div className="flex justify-between items-start mb-4">
               <div className="flex-1">
@@ -175,6 +248,13 @@ const Deals = () => {
           </div>
         ))}
       </div>
+
+      {filteredDeals.length === 0 && deals.length > 0 && (
+        <div className="text-center py-12 text-gray-500">
+          <DollarSign size={48} className="mx-auto mb-4 opacity-50" />
+          <p>לא נמצאו עסקאות התואמות את החיפוש</p>
+        </div>
+      )}
 
       {deals.length === 0 && (
         <div className="text-center py-12 text-gray-500">
@@ -271,6 +351,14 @@ const Deals = () => {
                   className="input-field"
                 />
               </div>
+
+              {/* בחירת מוצרים ושירותים */}
+              <DealItemsSelector
+                items={formData.items}
+                products={products}
+                services={services}
+                onChange={(items) => setFormData({ ...formData, items })}
+              />
 
               <div>
                 <label className="block text-sm font-medium mb-1">הערות</label>

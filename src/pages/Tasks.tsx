@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useStore } from '../store/useStore'
-import { Plus, Edit2, Trash2, CheckSquare, Calendar, AlertCircle } from 'lucide-react'
+import { Plus, Edit2, Trash2, CheckSquare, Calendar, AlertCircle, Download } from 'lucide-react'
 import { Task } from '../types'
 import { format } from 'date-fns'
+import { exportTasksToCSV } from '../utils/csvExport'
 
 const Tasks = () => {
   const { tasks, customers, deals, addTask, updateTask, deleteTask } = useStore()
@@ -139,13 +140,22 @@ const Tasks = () => {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">ניהול משימות</h1>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Plus size={20} />
-          משימה חדשה
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => exportTasksToCSV(tasks, customers)}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+          >
+            <Download size={20} />
+            ייצוא CSV
+          </button>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Plus size={20} />
+            משימה חדשה
+          </button>
+        </div>
       </div>
 
       {/* Tasks Grid */}

@@ -12,6 +12,15 @@ export interface Customer {
   notes: string
 }
 
+export interface DealItem {
+  id: string
+  type: 'product' | 'service'
+  itemId: string
+  quantity: number
+  price: number
+  discount?: number
+}
+
 export interface Deal {
   id: string
   title: string
@@ -22,6 +31,7 @@ export interface Deal {
   expectedCloseDate: Date
   createdAt: Date
   notes: string
+  items?: DealItem[] // מוצרים ושירותים בעסקה
 }
 
 export interface Task {

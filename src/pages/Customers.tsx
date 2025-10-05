@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { Customer } from '../types';
-import { Plus, Edit2, Trash2, Phone, Mail, Building, Users, Upload, User } from 'lucide-react';
+import { Plus, Edit2, Trash2, Phone, Mail, Building, Users, Upload, User, Search, Filter, Download } from 'lucide-react';
+import { exportCustomersToCSV } from '../utils/csvExport';
 
 export default function Customers() {
   const { customers, addCustomer, updateCustomer, deleteCustomer } = useStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'lead'>('all');
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -112,6 +115,19 @@ export default function Customers() {
     }
   };
 
+  // Filter and search customers
+  const filteredCustomers = customers.filter(customer => {
+    const matchesSearch =
+      customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      customer.phone.includes(searchQuery) ||
+      customer.company.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesStatus = statusFilter === 'all' || customer.status === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -119,13 +135,51 @@ export default function Customers() {
           <h1 className="text-2xl font-bold text-gray-900">לקוחות</h1>
           <p className="text-gray-600">ניהול לקוחות ומידע ליצירת קשר</p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          <Plus className="w-5 h-5" />
-          לקוח חדש
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => exportCustomersToCSV(customers)}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+          >
+            <Download className="w-5 h-5" />
+            ייצוא CSV
+          </button>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <Plus className="w-5 h-5" />
+            לקוח חדש
+          </button>
+        </div>
+      </div>
+
+      {/* Search and Filter */}
+      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="relative">
+            <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="חיפוש לפי שם, אימייל, טלפון או חברה..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          <div className="relative">
+            <Filter className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive' | 'lead')}
+              className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
+            >
+              <option value="all">כל הסטטוסים</option>
+              <option value="active">פעיל</option>
+              <option value="lead">ליד</option>
+              <option value="inactive">לא פעיל</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Stats */}
@@ -165,7 +219,7 @@ export default function Customers() {
 
       {/* Customers Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {customers.map((customer) => {
+        {filteredCustomers.map((customer) => {
           const customerWithImage = customer as Customer & { profileImage?: string };
           return (
             <div key={customer.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">

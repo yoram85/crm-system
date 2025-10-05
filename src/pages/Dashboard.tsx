@@ -1,6 +1,7 @@
 import { useStore } from '../store/useStore'
 import { Users, DollarSign, CheckSquare, TrendingUp, Calendar } from 'lucide-react'
-import { format, isAfter, isBefore, addDays } from 'date-fns'
+import { format, isAfter, isBefore, addDays, subMonths, startOfMonth } from 'date-fns'
+import { BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 const Dashboard = () => {
   const { customers, deals, tasks } = useStore()
@@ -46,6 +47,41 @@ const Dashboard = () => {
       color: 'bg-orange-500',
     },
   ]
+
+  // Chart data - Deals by stage
+  const dealsChartData = [
+    { name: 'ליד', value: deals.filter(d => d.stage === 'lead').length, color: '#3B82F6' },
+    { name: 'הצעת מחיר', value: deals.filter(d => d.stage === 'proposal').length, color: '#A855F7' },
+    { name: 'משא ומתן', value: deals.filter(d => d.stage === 'negotiation').length, color: '#EAB308' },
+    { name: 'נסגר', value: deals.filter(d => d.stage === 'won').length, color: '#22C55E' },
+    { name: 'אבוד', value: deals.filter(d => d.stage === 'lost').length, color: '#EF4444' },
+  ].filter(item => item.value > 0)
+
+  // Chart data - Monthly revenue (last 6 months)
+  const monthlyRevenueData = Array.from({ length: 6 }, (_, i) => {
+    const monthDate = subMonths(new Date(), 5 - i)
+    const monthStart = startOfMonth(monthDate)
+    const monthEnd = startOfMonth(addDays(monthDate, 32))
+
+    const monthRevenue = wonDeals
+      .filter(d => {
+        const closeDate = new Date(d.expectedCloseDate)
+        return isAfter(closeDate, monthStart) && isBefore(closeDate, monthEnd)
+      })
+      .reduce((sum, deal) => sum + deal.amount, 0)
+
+    return {
+      month: format(monthDate, 'MM/yy'),
+      revenue: monthRevenue,
+    }
+  })
+
+  // Chart data - Tasks by status
+  const tasksChartData = [
+    { name: 'ממתין', value: tasks.filter(t => t.status === 'pending').length, color: '#F59E0B' },
+    { name: 'בתהליך', value: tasks.filter(t => t.status === 'in-progress').length, color: '#3B82F6' },
+    { name: 'הושלם', value: tasks.filter(t => t.status === 'completed').length, color: '#10B981' },
+  ].filter(item => item.value > 0)
 
   return (
     <div>
@@ -210,6 +246,72 @@ const Dashboard = () => {
             <p className="text-gray-500 text-center py-8">אין משימות קרובות</p>
           )}
         </div>
+      </div>
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+        {/* Deals by Stage - Pie Chart */}
+        {dealsChartData.length > 0 && (
+          <div className="card">
+            <h2 className="text-lg font-semibold mb-4">עסקאות לפי שלב</h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={dealsChartData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {dealsChartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        {/* Tasks by Status - Bar Chart */}
+        {tasksChartData.length > 0 && (
+          <div className="card">
+            <h2 className="text-lg font-semibold mb-4">משימות לפי סטטוס</h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={tasksChartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="value" fill="#3B82F6">
+                  {tasksChartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        {/* Monthly Revenue - Line Chart */}
+        {monthlyRevenueData.some(d => d.revenue > 0) && (
+          <div className="card lg:col-span-2">
+            <h2 className="text-lg font-semibold mb-4">הכנסות חודשיות (6 חודשים אחרונים)</h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={monthlyRevenueData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip formatter={(value: number) => `₪${value.toLocaleString()}`} />
+                <Legend />
+                <Line type="monotone" dataKey="revenue" stroke="#8B5CF6" strokeWidth={2} name="הכנסות" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
     </div>
   )
