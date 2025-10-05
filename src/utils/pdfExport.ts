@@ -8,55 +8,8 @@ import { hebrewFontBase64 } from './hebrewFont'
 const reverseHebrewText = (text: string): string => {
   if (!text) return text
 
-  // Helper function to check if character is Hebrew
-  const isHebrew = (char: string) => /[\u0590-\u05FF]/.test(char)
-
-  // Helper function to check if character is a number or Latin
-  const isLatin = (char: string) => /[a-zA-Z0-9]/.test(char)
-
-  const chars = text.split('')
-  let result: string[] = []
-  let hebrewBuffer: string[] = []
-  let latinBuffer: string[] = []
-
-  const flushHebrew = () => {
-    if (hebrewBuffer.length > 0) {
-      result.push(...hebrewBuffer.reverse())
-      hebrewBuffer = []
-    }
-  }
-
-  const flushLatin = () => {
-    if (latinBuffer.length > 0) {
-      result.push(...latinBuffer)
-      latinBuffer = []
-    }
-  }
-
-  // Process each character
-  for (let i = 0; i < chars.length; i++) {
-    const char = chars[i]
-
-    if (isHebrew(char)) {
-      flushLatin()
-      hebrewBuffer.push(char)
-    } else if (isLatin(char)) {
-      flushHebrew()
-      latinBuffer.push(char)
-    } else {
-      // Special characters (spaces, punctuation)
-      flushHebrew()
-      flushLatin()
-      result.push(char)
-    }
-  }
-
-  // Flush remaining buffers
-  flushHebrew()
-  flushLatin()
-
-  // Reverse the entire result for RTL
-  return result.reverse().join('')
+  // Simple character reversal for Hebrew text
+  return text.split('').reverse().join('')
 }
 
 // Configure jsPDF for RTL and Hebrew support
@@ -145,7 +98,7 @@ export const exportCustomersToPDF = (customers: Customer[]) => {
     { align: 'right' }
   )
 
-  doc.save(reverseHebrewText(`לקוחות_${format(new Date(), 'dd-MM-yyyy')}.pdf`))
+  doc.save(`לקוחות_${format(new Date(), 'dd-MM-yyyy')}.pdf`)
 }
 
 export const exportDealsToPDF = (deals: Deal[], customers: Customer[]) => {
@@ -216,7 +169,7 @@ export const exportDealsToPDF = (deals: Deal[], customers: Customer[]) => {
   )
   doc.text(reverseHebrewText(`הכנסות: ₪${wonAmount.toLocaleString()}`), 195, finalY + 28, { align: 'right' })
 
-  doc.save(reverseHebrewText(`עסקאות_${format(new Date(), 'dd-MM-yyyy')}.pdf`))
+  doc.save(`עסקאות_${format(new Date(), 'dd-MM-yyyy')}.pdf`)
 }
 
 export const exportTasksToPDF = (tasks: Task[], customers: Customer[]) => {
@@ -295,7 +248,7 @@ export const exportTasksToPDF = (tasks: Task[], customers: Customer[]) => {
     { align: 'right' }
   )
 
-  doc.save(reverseHebrewText(`משימות_${format(new Date(), 'dd-MM-yyyy')}.pdf`))
+  doc.save(`משימות_${format(new Date(), 'dd-MM-yyyy')}.pdf`)
 }
 
 export const exportProductsToPDF = (products: Product[]) => {
@@ -343,7 +296,7 @@ export const exportProductsToPDF = (products: Product[]) => {
   doc.text(reverseHebrewText(`סך הכל מוצרים: ${products.length}`), 195, finalY + 10, { align: 'right' })
   doc.text(reverseHebrewText(`ערך מלאי: ₪${totalValue.toLocaleString()}`), 195, finalY + 16, { align: 'right' })
 
-  doc.save(reverseHebrewText(`מוצרים_${format(new Date(), 'dd-MM-yyyy')}.pdf`))
+  doc.save(`מוצרים_${format(new Date(), 'dd-MM-yyyy')}.pdf`)
 }
 
 export const exportServicesToPDF = (services: Service[]) => {
@@ -388,7 +341,7 @@ export const exportServicesToPDF = (services: Service[]) => {
   doc.setFontSize(10)
   doc.text(reverseHebrewText(`סך הכל שירותים: ${services.length}`), 195, finalY + 10, { align: 'right' })
 
-  doc.save(reverseHebrewText(`שירותים_${format(new Date(), 'dd-MM-yyyy')}.pdf`))
+  doc.save(`שירותים_${format(new Date(), 'dd-MM-yyyy')}.pdf`)
 }
 
 // Comprehensive business report
@@ -504,5 +457,5 @@ export const exportComprehensiveReport = (
   currentY += 6
   doc.text(reverseHebrewText(`שירותים: ${services.length}`), 195, currentY, { align: 'right' })
 
-  doc.save(reverseHebrewText(`דוח_עסקי_מקיף_${format(new Date(), 'dd-MM-yyyy')}.pdf`))
+  doc.save(`דוח_עסקי_מקיף_${format(new Date(), 'dd-MM-yyyy')}.pdf`)
 }
