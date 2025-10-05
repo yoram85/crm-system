@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { Customer } from '../types';
-import { Plus, Edit2, Trash2, Phone, Mail, Building, Users, Upload, User, Search, Filter, Download, Send, CheckSquare, Square } from 'lucide-react';
+import { Plus, Edit2, Trash2, Phone, Mail, Building, Users, Upload, User, Search, Filter, Download, Send, CheckSquare, Square, SlidersHorizontal } from 'lucide-react';
 import { exportCustomersToCSV } from '../utils/csvExport';
 import EmailComposer from '../components/EmailComposer';
+import AdvancedSearch, { SearchFilters } from '../components/AdvancedSearch';
 
 export default function Customers() {
   const { customers, addCustomer, updateCustomer, deleteCustomer } = useStore();
@@ -15,6 +16,8 @@ export default function Customers() {
   const [selectedCustomerForEmail, setSelectedCustomerForEmail] = useState<Customer | null>(null);
   const [selectedCustomers, setSelectedCustomers] = useState<Set<string>>(new Set());
   const [bulkActionMenuOpen, setBulkActionMenuOpen] = useState(false);
+  const [advancedSearchOpen, setAdvancedSearchOpen] = useState(false);
+  const [advancedFilters, setAdvancedFilters] = useState<SearchFilters | null>(null);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -169,8 +172,18 @@ export default function Customers() {
     }
   };
 
+  // Advanced search handler
+  const handleAdvancedSearch = (filters: SearchFilters) => {
+    setAdvancedFilters(filters);
+  };
+
+  const clearAdvancedFilters = () => {
+    setAdvancedFilters(null);
+  };
+
   // Filter and search customers
   const filteredCustomers = customers.filter(customer => {
+    // Basic search
     const matchesSearch =
       customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -178,6 +191,22 @@ export default function Customers() {
       customer.company.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesStatus = statusFilter === 'all' || customer.status === statusFilter;
+
+    // Advanced filters
+    if (advancedFilters) {
+      const { keyword, status } = advancedFilters;
+
+      const matchesKeyword = !keyword ||
+        customer.name.toLowerCase().includes(keyword.toLowerCase()) ||
+        customer.email.toLowerCase().includes(keyword.toLowerCase()) ||
+        customer.phone.includes(keyword) ||
+        customer.company.toLowerCase().includes(keyword.toLowerCase()) ||
+        (customer.notes && customer.notes.toLowerCase().includes(keyword.toLowerCase()));
+
+      const matchesAdvancedStatus = !status || customer.status === status;
+
+      return matchesSearch && matchesStatus && matchesKeyword && matchesAdvancedStatus;
+    }
 
     return matchesSearch && matchesStatus;
   });
@@ -280,6 +309,25 @@ export default function Customers() {
             )}
             <span className="text-sm text-gray-700 dark:text-gray-300">בחר הכל</span>
           </button>
+          <button
+            onClick={() => setAdvancedSearchOpen(true)}
+            className="flex items-center gap-2 px-3 py-2 border border-blue-300 dark:border-blue-600 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+          >
+            <SlidersHorizontal className="w-5 h-5" />
+            <span className="text-sm">חיפוש מתקדם</span>
+          </button>
+          {advancedFilters && (
+            <button
+              onClick={clearAdvancedFilters}
+              className="flex items-center gap-2 px-3 py-2 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+            >
+              <Filter className="w-4 h-4" />
+              <span className="text-sm">פילטרים פעילים</span>
+              <span className="bg-blue-600 dark:bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">
+                {Object.values(advancedFilters).filter(v => v && (Array.isArray(v) ? v.length > 0 : true)).length}
+              </span>
+            </button>
+          )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="relative">
@@ -592,6 +640,13 @@ export default function Customers() {
           setSelectedCustomerForEmail(null);
         }}
         recipient={selectedCustomerForEmail || undefined}
+      />
+
+      {/* Advanced Search */}
+      <AdvancedSearch
+        isOpen={advancedSearchOpen}
+        onClose={() => setAdvancedSearchOpen(false)}
+        onSearch={handleAdvancedSearch}
       />
     </div>
   );
