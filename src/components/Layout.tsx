@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { Home, Users, DollarSign, CheckSquare, Package, Briefcase, FileText, Settings, Menu, X } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Home, Users, DollarSign, CheckSquare, Package, Briefcase, FileText, Settings, Menu, X, LogOut, User as UserIcon } from 'lucide-react'
 import NotificationCenter from './NotificationCenter'
+import { useAuthStore } from '../store/useAuthStore'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -10,6 +11,13 @@ interface LayoutProps {
 const Layout = ({ children }: LayoutProps) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const location = useLocation()
+  const navigate = useNavigate()
+  const { user, logout } = useAuthStore()
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
 
   const menuItems = [
     { path: '/', icon: Home, label: 'דף הבית' },
@@ -42,11 +50,11 @@ const Layout = ({ children }: LayoutProps) => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed right-0 top-16 bottom-0 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out z-30 ${
+        className={`fixed right-0 top-16 bottom-0 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out z-30 flex flex-col ${
           isSidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'
         }`}
       >
-        <nav className="p-4 space-y-2">
+        <nav className="p-4 space-y-2 flex-1">
           {menuItems.map((item) => {
             const Icon = item.icon
             const isActive = location.pathname === item.path
@@ -67,6 +75,30 @@ const Layout = ({ children }: LayoutProps) => {
             )
           })}
         </nav>
+
+        {/* User Info & Logout */}
+        <div className="p-4 border-t border-gray-200">
+          <div className="flex items-center gap-3 mb-3 p-3 bg-gray-50 rounded-lg">
+            <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center">
+              <UserIcon className="text-white" size={20} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">
+                {user?.firstName} {user?.lastName}
+              </p>
+              <p className="text-xs text-gray-500">
+                {user?.role === 'admin' ? 'מנהל' : user?.role === 'user' ? 'משתמש' : 'צופה'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          >
+            <LogOut size={20} />
+            <span>התנתק</span>
+          </button>
+        </div>
       </aside>
 
       {/* Overlay for mobile */}

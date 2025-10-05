@@ -130,3 +130,18 @@ export interface AirtableConfig {
     services?: string
   }
 }
+
+export interface User {
+  id: string
+  email: string
+  firstName: string
+  lastName: string
+  role: 'admin' | 'user' | 'viewer'
+  createdAt: Date
+  lastLogin?: Date
+}
+
+export interface AuthState {
+  user: User | null
+  isAuthenticated: boolean
+}
