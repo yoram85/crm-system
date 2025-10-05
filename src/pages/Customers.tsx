@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { Customer } from '../types';
-import { Plus, Edit2, Trash2, Phone, Mail, Building, Users, Upload, User, Search, Filter, Download, Send } from 'lucide-react';
+import { Plus, Edit2, Trash2, Phone, Mail, Building, Users, Upload, User, Search, Filter, Download, Send, CheckSquare, Square } from 'lucide-react';
 import { exportCustomersToCSV } from '../utils/csvExport';
 import EmailComposer from '../components/EmailComposer';
 
@@ -13,6 +13,8 @@ export default function Customers() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'lead'>('all');
   const [emailComposerOpen, setEmailComposerOpen] = useState(false);
   const [selectedCustomerForEmail, setSelectedCustomerForEmail] = useState<Customer | null>(null);
+  const [selectedCustomers, setSelectedCustomers] = useState<Set<string>>(new Set());
+  const [bulkActionMenuOpen, setBulkActionMenuOpen] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -82,6 +84,50 @@ export default function Customers() {
     setEmailComposerOpen(true);
   };
 
+  // Bulk Selection Handlers
+  const toggleCustomerSelection = (customerId: string) => {
+    const newSelection = new Set(selectedCustomers);
+    if (newSelection.has(customerId)) {
+      newSelection.delete(customerId);
+    } else {
+      newSelection.add(customerId);
+    }
+    setSelectedCustomers(newSelection);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedCustomers.size === filteredCustomers.length) {
+      setSelectedCustomers(new Set());
+    } else {
+      setSelectedCustomers(new Set(filteredCustomers.map(c => c.id)));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (window.confirm(`האם אתה בטוח שברצונך למחוק ${selectedCustomers.size} לקוחות?`)) {
+      selectedCustomers.forEach(id => deleteCustomer(id));
+      setSelectedCustomers(new Set());
+      setBulkActionMenuOpen(false);
+    }
+  };
+
+  const handleBulkExport = () => {
+    const selectedCustomersList = customers.filter(c => selectedCustomers.has(c.id));
+    exportCustomersToCSV(selectedCustomersList);
+    setBulkActionMenuOpen(false);
+  };
+
+  const handleBulkStatusChange = (newStatus: 'active' | 'inactive' | 'lead') => {
+    selectedCustomers.forEach(id => {
+      const customer = customers.find(c => c.id === id);
+      if (customer) {
+        updateCustomer(id, { ...customer, status: newStatus });
+      }
+    });
+    setSelectedCustomers(new Set());
+    setBulkActionMenuOpen(false);
+  };
+
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingCustomer(null);
@@ -140,29 +186,101 @@ export default function Customers() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">לקוחות</h1>
-          <p className="text-gray-600">ניהול לקוחות ומידע ליצירת קשר</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">לקוחות</h1>
+          <p className="text-gray-600 dark:text-gray-400">ניהול לקוחות ומידע ליצירת קשר</p>
+          {selectedCustomers.size > 0 && (
+            <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+              {selectedCustomers.size} לקוחות נבחרו
+            </p>
+          )}
         </div>
         <div className="flex gap-3">
-          <button
-            onClick={() => exportCustomersToCSV(customers)}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-          >
-            <Download className="w-5 h-5" />
-            ייצוא CSV
-          </button>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            <Plus className="w-5 h-5" />
-            לקוח חדש
-          </button>
+          {selectedCustomers.size > 0 ? (
+            <div className="relative">
+              <button
+                onClick={() => setBulkActionMenuOpen(!bulkActionMenuOpen)}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+              >
+                <CheckSquare className="w-5 h-5" />
+                פעולות על {selectedCustomers.size} נבחרים
+              </button>
+              {bulkActionMenuOpen && (
+                <div className="absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10">
+                  <div className="py-2">
+                    <button
+                      onClick={handleBulkExport}
+                      className="w-full text-right px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white flex items-center gap-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      ייצא נבחרים
+                    </button>
+                    <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+                    <button
+                      onClick={() => handleBulkStatusChange('active')}
+                      className="w-full text-right px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-green-600 dark:text-green-400 flex items-center gap-2"
+                    >
+                      סמן כפעיל
+                    </button>
+                    <button
+                      onClick={() => handleBulkStatusChange('lead')}
+                      className="w-full text-right px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-blue-600 dark:text-blue-400 flex items-center gap-2"
+                    >
+                      סמן כליד
+                    </button>
+                    <button
+                      onClick={() => handleBulkStatusChange('inactive')}
+                      className="w-full text-right px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 flex items-center gap-2"
+                    >
+                      סמן כלא פעיל
+                    </button>
+                    <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+                    <button
+                      onClick={handleBulkDelete}
+                      className="w-full text-right px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 dark:text-red-400 flex items-center gap-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      מחק נבחרים
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              <button
+                onClick={() => exportCustomersToCSV(customers)}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                <Download className="w-5 h-5" />
+                ייצוא CSV
+              </button>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <Plus className="w-5 h-5" />
+                לקוח חדש
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       {/* Search and Filter */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-4 mb-4">
+          <button
+            onClick={toggleSelectAll}
+            className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            {selectedCustomers.size === filteredCustomers.length && filteredCustomers.length > 0 ? (
+              <CheckSquare className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            ) : (
+              <Square className="w-5 h-5 text-gray-400" />
+            )}
+            <span className="text-sm text-gray-700 dark:text-gray-300">בחר הכל</span>
+          </button>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="relative">
             <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -171,7 +289,7 @@ export default function Customers() {
               placeholder="חיפוש לפי שם, אימייל, טלפון או חברה..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pr-10 pl-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
           <div className="relative">
@@ -179,7 +297,7 @@ export default function Customers() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive' | 'lead')}
-              className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
+              className="w-full pr-10 pl-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
             >
               <option value="all">כל הסטטוסים</option>
               <option value="active">פעיל</option>
@@ -229,10 +347,28 @@ export default function Customers() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredCustomers.map((customer) => {
           const customerWithImage = customer as Customer & { profileImage?: string };
+          const isSelected = selectedCustomers.has(customer.id);
           return (
-            <div key={customer.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div
+              key={customer.id}
+              className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border-2 p-6 transition-all ${
+                isSelected
+                  ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-200 dark:ring-blue-900'
+                  : 'border-gray-200 dark:border-gray-700'
+              }`}
+            >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => toggleCustomerSelection(customer.id)}
+                    className="flex-shrink-0"
+                  >
+                    {isSelected ? (
+                      <CheckSquare className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    ) : (
+                      <Square className="w-5 h-5 text-gray-400 hover:text-blue-500" />
+                    )}
+                  </button>
                   {customerWithImage.profileImage ? (
                     <img
                       src={customerWithImage.profileImage}
@@ -245,7 +381,7 @@ export default function Customers() {
                     </div>
                   )}
                   <div>
-                    <h3 className="font-semibold text-gray-900">{customer.name}</h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">{customer.name}</h3>
                     <span className={`inline-block px-2 py-1 text-xs rounded-full ${getStatusColor(customer.status)}`}>
                       {getStatusLabel(customer.status)}
                     </span>
@@ -275,23 +411,23 @@ export default function Customers() {
               </div>
 
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-gray-600">
+                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                   <Mail className="w-4 h-4" />
                   <span className="text-sm">{customer.email}</span>
                 </div>
-                <div className="flex items-center gap-2 text-gray-600">
+                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                   <Phone className="w-4 h-4" />
                   <span className="text-sm">{customer.phone}</span>
                 </div>
-                <div className="flex items-center gap-2 text-gray-600">
+                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                   <Building className="w-4 h-4" />
                   <span className="text-sm">{customer.company}</span>
                 </div>
               </div>
 
               {customer.notes && (
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <p className="text-sm text-gray-600">{customer.notes}</p>
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{customer.notes}</p>
                 </div>
               )}
             </div>
