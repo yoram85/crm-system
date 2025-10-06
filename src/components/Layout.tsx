@@ -4,6 +4,7 @@ import { Home, Users, DollarSign, CheckSquare, Package, Briefcase, FileText, Act
 import NotificationCenter from './NotificationCenter'
 import { useAuthStore } from '../store/useAuthStore'
 import { useThemeStore } from '../store/useThemeStore'
+import { useStore } from '../store/useStore'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -16,9 +17,22 @@ const Layout = ({ children }: LayoutProps) => {
   const { user, logout } = useAuthStore()
   const { isDarkMode, toggleDarkMode } = useThemeStore()
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    console.log('Layout: handleLogout called')
+
+    // Logout from auth
+    await logout()
+
+    // Clear all data from store
+    useStore.persist.clearStorage()
+
+    console.log('Layout: Navigating to login')
     navigate('/login')
+
+    // Force reload to clear everything
+    setTimeout(() => {
+      window.location.reload()
+    }, 100)
   }
 
   const menuItems = [

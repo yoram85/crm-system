@@ -275,10 +275,22 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       logout: async () => {
+        console.log('Logging out...')
+
+        // Sign out from Supabase
         if (isSupabaseConfigured()) {
+          console.log('Signing out from Supabase...')
           await supabase.auth.signOut()
         }
+
+        // Clear auth state
         set({ user: null, isAuthenticated: false })
+
+        // Clear LocalStorage
+        localStorage.removeItem('auth-storage')
+        localStorage.removeItem('crm-storage')
+
+        console.log('Logout complete - all storage cleared')
       },
 
       updateLastLogin: async () => {
