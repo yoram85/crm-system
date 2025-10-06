@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
 import { Customer, Deal, Task, Product, Service, WebhookConfig, IntegrationConfig, User, Activity, Permission } from '../types'
 import { notifyWebhooks, syncToIntegrations } from '../utils/integrations'
 import { isSupabaseConfigured } from '../lib/supabase'
@@ -75,9 +74,7 @@ const getUpdateWebhook = () => (id: string, updates: Partial<WebhookConfig>) => 
   useStore.getState().updateWebhook(id, updates)
 }
 
-export const useStore = create<CRMState>()(
-  persist(
-    (set, get) => ({
+export const useStore = create<CRMState>()((set, get) => ({
       customers: [],
       deals: [],
       tasks: [],
@@ -702,10 +699,4 @@ export const useStore = create<CRMState>()(
         get()
           .activities.filter((a) => a.userId === userId)
           .slice(0, limit),
-    }),
-    {
-      name: 'crm-storage',
-      storage: createJSONStorage(() => localStorage),
-    }
-  )
-)
+    }))

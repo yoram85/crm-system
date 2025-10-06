@@ -4,7 +4,6 @@ import { Home, Users, DollarSign, CheckSquare, Package, Briefcase, FileText, Act
 import NotificationCenter from './NotificationCenter'
 import { useAuthStore } from '../store/useAuthStore'
 import { useThemeStore } from '../store/useThemeStore'
-import { useStore } from '../store/useStore'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -22,9 +21,6 @@ const Layout = ({ children }: LayoutProps) => {
 
     // Logout from auth
     await logout()
-
-    // Clear all data from store
-    useStore.persist.clearStorage()
 
     console.log('Layout: Navigating to login')
     navigate('/login')
