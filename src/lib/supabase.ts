@@ -12,18 +12,28 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
+// Helper function to check if Supabase is configured
+export const isSupabaseConfigured = () => {
+  return !!(supabaseUrl && supabaseAnonKey && supabaseUrl !== '' && supabaseAnonKey !== '')
+}
+
 // יצירת Supabase client
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true
+    detectSessionInUrl: true,
+    storage: window.localStorage,
+    storageKey: 'supabase.auth.token',
+    flowType: 'pkce',
   }
 })
 
-// Helper function to check if Supabase is configured
-export const isSupabaseConfigured = () => {
-  return !!(supabaseUrl && supabaseAnonKey && supabaseUrl !== '' && supabaseAnonKey !== '')
+// Debug: Log when session changes
+if (isSupabaseConfigured()) {
+  supabase.auth.onAuthStateChange((event, session) => {
+    console.log('Supabase auth event:', event, 'Session:', session?.user?.id || 'none')
+  })
 }
 
 // Database Types
