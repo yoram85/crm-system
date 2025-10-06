@@ -393,7 +393,7 @@ export const useAuthStore = create<AuthStore>()(
 
         console.log('✅ [AuthStore] Supabase is configured')
 
-        const redirectUrl = `${window.location.origin}/`
+        const redirectUrl = `${window.location.origin}/login`
         console.log('🟢 [AuthStore] Redirect URL:', redirectUrl)
 
         try {
