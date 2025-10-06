@@ -49,6 +49,9 @@ const mockUsers: Array<User & { password: string }> = [
   },
 ]
 
+// Flag to prevent multiple simultaneous auth initializations
+let isInitializing = false
+
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set, get) => ({
@@ -59,8 +62,17 @@ export const useAuthStore = create<AuthStore>()(
       initializeAuth: async () => {
         console.log('🟣 [AuthStore] initializeAuth called')
 
+        // Prevent race conditions
+        if (isInitializing) {
+          console.log('⚠️ [AuthStore] Already initializing, skipping...')
+          return
+        }
+
+        isInitializing = true
+
         if (!isSupabaseConfigured()) {
           console.log('⚠️ [AuthStore] Supabase not configured, using mock auth')
+          isInitializing = false
           return
         }
 
@@ -157,6 +169,9 @@ export const useAuthStore = create<AuthStore>()(
           }
         } catch (error) {
           console.error('❌ [AuthStore] Error initializing auth:', error)
+        } finally {
+          isInitializing = false
+          console.log('🟣 [AuthStore] initializeAuth completed, flag reset')
         }
       },
 
