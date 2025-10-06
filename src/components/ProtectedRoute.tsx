@@ -17,10 +17,12 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
   // Check role-based access
   if (requiredRole) {
     const roleHierarchy: Record<UserRole, number> = {
-      admin: 5,
-      manager: 4,
-      sales: 3,
-      support: 2,
+      developer: 7,
+      admin: 6,
+      manager: 5,
+      sales: 4,
+      support: 3,
+      user: 2,
       viewer: 1
     }
     const userRoleLevel = roleHierarchy[user.role]

@@ -17,17 +17,28 @@ interface AuthStore extends AuthState {
 const mockUsers: Array<User & { password: string }> = [
   {
     id: '1',
-    email: 'admin@crm.com',
-    password: 'admin123',
-    firstName: 'מנהל',
+    email: 'developer@crm.com',
+    password: 'dev123',
+    firstName: 'מפתח',
     lastName: 'ראשי',
-    role: 'admin',
+    role: 'developer',
     status: 'active',
     createdAt: new Date('2024-01-01'),
     lastLogin: new Date(),
   },
   {
     id: '2',
+    email: 'admin@crm.com',
+    password: 'admin123',
+    firstName: 'מנהל',
+    lastName: 'מערכת',
+    role: 'admin',
+    status: 'active',
+    createdAt: new Date('2024-01-01'),
+    lastLogin: new Date(),
+  },
+  {
+    id: '3',
     email: 'sales@crm.com',
     password: 'sales123',
     firstName: 'איש',
@@ -38,12 +49,12 @@ const mockUsers: Array<User & { password: string }> = [
     lastLogin: new Date(),
   },
   {
-    id: '3',
-    email: 'viewer@crm.com',
-    password: 'viewer123',
-    firstName: 'צופה',
-    lastName: 'בלבד',
-    role: 'viewer',
+    id: '4',
+    email: 'user@crm.com',
+    password: 'user123',
+    firstName: 'משתמש',
+    lastName: 'רגיל',
+    role: 'user',
     status: 'active',
     createdAt: new Date('2024-01-01'),
     lastLogin: new Date(),
@@ -116,8 +127,8 @@ export const useAuthStore = create<AuthStore>()(
               const firstName = userMeta?.full_name?.split(' ')[0] || userMeta?.name?.split(' ')[0] || session.user.email?.split('@')[0] || 'משתמש'
               const lastName = userMeta?.full_name?.split(' ').slice(1).join(' ') || userMeta?.name?.split(' ').slice(1).join(' ') || 'חדש'
 
-              // Automatically set yoram1985@gmail.com as admin
-              const role = session.user.email === 'yoram1985@gmail.com' ? 'admin' : 'sales'
+              // Automatically set yoram1985@gmail.com as developer
+              const role = session.user.email === 'yoram1985@gmail.com' ? 'developer' : 'user'
 
               console.log('🟣 [AuthStore] Creating profile with:', { firstName, lastName, role })
 

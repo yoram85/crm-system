@@ -131,7 +131,7 @@ export interface AirtableConfig {
   }
 }
 
-export type UserRole = 'admin' | 'manager' | 'sales' | 'support' | 'viewer'
+export type UserRole = 'developer' | 'admin' | 'manager' | 'sales' | 'support' | 'user' | 'viewer'
 
 export type Permission =
   | 'customers.view' | 'customers.create' | 'customers.edit' | 'customers.delete'

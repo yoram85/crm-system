@@ -6,18 +6,22 @@ import { PermissionGuard } from '../components/PermissionGuard'
 import { format } from 'date-fns'
 
 const roleLabels: Record<UserRole, string> = {
+  developer: 'מפתח',
   admin: 'מנהל מערכת',
-  manager: 'מנהל',
-  sales: 'מכירות',
+  manager: 'מנהל מכירות',
+  sales: 'איש מכירות',
   support: 'תמיכה',
+  user: 'משתמש',
   viewer: 'צופה'
 }
 
 const roleColors: Record<UserRole, string> = {
+  developer: 'bg-red-100 text-red-800',
   admin: 'bg-purple-100 text-purple-800',
   manager: 'bg-blue-100 text-blue-800',
   sales: 'bg-green-100 text-green-800',
   support: 'bg-orange-100 text-orange-800',
+  user: 'bg-cyan-100 text-cyan-800',
   viewer: 'bg-gray-100 text-gray-800'
 }
 

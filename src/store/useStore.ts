@@ -676,7 +676,8 @@ export const useStore = create<CRMState>()((set, get) => ({
         }
 
         if (!user) return false
-        if (user.role === 'admin') return true
+        // Developer and Admin have all permissions
+        if (user.role === 'developer' || user.role === 'admin') return true
         if (user.permissions?.includes(permission)) return true
 
         return false

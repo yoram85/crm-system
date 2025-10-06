@@ -54,15 +54,18 @@ export const handler: Handler = async (event) => {
     if (profileError) {
       // If profile doesn't exist, create it
       if (profileError.code === 'PGRST116') {
+        // Special handling for yoram1985@gmail.com - Developer with custom details
+        const isYoram = user.email === 'yoram1985@gmail.com'
+
         const newProfile = {
           id: user.id,
           email: user.email,
-          first_name: user.user_metadata?.given_name || 'משתמש',
-          last_name: user.user_metadata?.family_name || 'חדש',
-          role: user.email === 'yoram1985@gmail.com' ? 'admin' : 'sales',
+          first_name: isYoram ? 'וורטאו' : (user.user_metadata?.given_name || 'משתמש'),
+          last_name: isYoram ? 'זאודו' : (user.user_metadata?.family_name || 'חדש'),
+          role: isYoram ? 'developer' : 'user',
           status: 'active',
           avatar: user.user_metadata?.avatar_url || null,
-          phone: null,
+          phone: isYoram ? '0509819243' : null,
           department: null,
           monthly_target: null,
         }
@@ -95,11 +98,16 @@ export const handler: Handler = async (event) => {
       }
     }
 
-    // Auto-upgrade yoram1985@gmail.com to admin if needed
-    if (profile && user.email === 'yoram1985@gmail.com' && profile.role !== 'admin') {
+    // Auto-upgrade yoram1985@gmail.com to developer with full details if needed
+    if (profile && user.email === 'yoram1985@gmail.com' && profile.role !== 'developer') {
       const { data: updatedProfile } = await supabase
         .from('user_profiles')
-        .update({ role: 'admin' })
+        .update({
+          role: 'developer',
+          first_name: 'וורטאו',
+          last_name: 'זאודו',
+          phone: '0509819243'
+        })
         .eq('id', user.id)
         .select()
         .single()
