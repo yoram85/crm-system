@@ -513,11 +513,17 @@ if (isSupabaseConfigured()) {
       // Fetch user profile directly instead of calling initializeAuth
       try {
         console.log('🔶 [AuthStore] Fetching profile for signed in user...')
+        console.log('🔶 [AuthStore] User ID:', session.user.id)
+        console.log('🔶 [AuthStore] User Email:', session.user.email)
         let { data: profile, error } = await supabase
           .from('user_profiles')
           .select('*')
           .eq('id', session.user.id)
           .single()
+
+        console.log('🔶 [AuthStore] Query completed')
+        console.log('🔶 [AuthStore] Profile data:', profile)
+        console.log('🔶 [AuthStore] Error:', error)
 
         // Automatically upgrade yoram1985@gmail.com to admin if not already
         if (!error && profile && session.user.email === 'yoram1985@gmail.com' && profile.role !== 'admin') {
@@ -559,10 +565,14 @@ if (isSupabaseConfigured()) {
           console.log('✅ [AuthStore] State updated! isAuthenticated should now be true')
           console.log('✅ [AuthStore] Current state:', useAuthStore.getState().isAuthenticated)
         } else {
-          console.error('❌ [AuthStore] Failed to fetch profile:', error)
+          console.error('❌ [AuthStore] Failed to fetch profile!')
+          console.error('❌ [AuthStore] Error details:', error)
+          console.error('❌ [AuthStore] Error message:', error?.message)
+          console.error('❌ [AuthStore] Error code:', error?.code)
         }
       } catch (error) {
-        console.error('❌ [AuthStore] Error fetching profile:', error)
+        console.error('❌ [AuthStore] Exception while fetching profile:', error)
+        console.error('❌ [AuthStore] Exception details:', JSON.stringify(error, null, 2))
       }
     } else if (event === 'TOKEN_REFRESHED') {
       console.log('🔶 [AuthStore] Token refreshed')
