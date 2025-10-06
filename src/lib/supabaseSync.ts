@@ -44,10 +44,24 @@ export const fetchCustomers = async (): Promise<Customer[]> => {
 }
 
 export const createCustomer = async (customer: Omit<Customer, 'id' | 'createdAt'>): Promise<Customer | null> => {
-  if (!isSupabaseConfigured()) return null
+  if (!isSupabaseConfigured()) {
+    console.log('createCustomer: Supabase not configured')
+    return null
+  }
 
   const userId = await getCurrentUserId()
-  if (!userId) return null
+  console.log('createCustomer: userId =', userId)
+
+  if (!userId) {
+    console.error('createCustomer: No user ID found!')
+    return null
+  }
+
+  console.log('createCustomer: Inserting customer to Supabase...', {
+    user_id: userId,
+    name: customer.name,
+    email: customer.email,
+  })
 
   const { data, error } = await supabase
     .from('customers')
@@ -67,9 +81,11 @@ export const createCustomer = async (customer: Omit<Customer, 'id' | 'createdAt'
     .single()
 
   if (error) {
-    console.error('Error creating customer:', error)
+    console.error('createCustomer: Error creating customer:', error)
     return null
   }
+
+  console.log('createCustomer: Customer created successfully!', data)
 
   return {
     id: data.id,

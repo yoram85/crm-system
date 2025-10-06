@@ -145,6 +145,8 @@ export const useStore = create<CRMState>()(
           name: `${customer.firstName} ${customer.lastName}`.trim(),
         }
 
+        console.log('Adding customer:', newCustomer)
+
         // Update local state immediately
         set((state) => ({
           customers: [...state.customers, newCustomer],
@@ -152,15 +154,21 @@ export const useStore = create<CRMState>()(
 
         // Sync to Supabase
         if (isSupabaseConfigured()) {
+          console.log('Supabase configured, saving customer...')
           const created = await supabaseSync.createCustomer(newCustomer)
           if (created) {
+            console.log('Customer saved to Supabase:', created)
             // Update with actual ID from Supabase
             set((state) => ({
               customers: state.customers.map(c =>
                 c.id === newCustomer.id ? created : c
               ),
             }))
+          } else {
+            console.error('Failed to save customer to Supabase')
           }
+        } else {
+          console.log('Supabase not configured, customer saved to LocalStorage only')
         }
 
         // Send to webhooks and integrations
