@@ -1,11 +1,21 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
 import { LogIn, AlertCircle } from 'lucide-react'
 
 const Login = () => {
-  const { signInWithGoogle } = useAuthStore()
+  const navigate = useNavigate()
+  const { signInWithGoogle, isAuthenticated } = useAuthStore()
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+
+  // Redirect to home if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      console.log('✅ [Login] User is authenticated, redirecting to home...')
+      navigate('/', { replace: true })
+    }
+  }, [isAuthenticated, navigate])
 
   const handleGoogleSignIn = async () => {
     console.log('🔵 [Login] Starting Google Sign-In...')

@@ -472,15 +472,23 @@ export const useAuthStore = create<AuthStore>()(
 // Listen to auth state changes
 if (isSupabaseConfigured()) {
   supabase.auth.onAuthStateChange(async (event, session) => {
+    console.log('🔶 [AuthStore] Auth state changed:', event, 'Session:', session ? 'exists' : 'none')
+
     if (event === 'SIGNED_OUT') {
+      console.log('🔶 [AuthStore] User signed out')
       // Just clear the state, don't call logout() to avoid infinite loop
       const state = useAuthStore.getState()
       if (state.isAuthenticated) {
         useAuthStore.setState({ user: null, isAuthenticated: false })
       }
     } else if (event === 'SIGNED_IN' && session?.user) {
+      console.log('🔶 [AuthStore] User signed in:', session.user.email)
       // Refresh user data
       await useAuthStore.getState().initializeAuth()
+    } else if (event === 'TOKEN_REFRESHED') {
+      console.log('🔶 [AuthStore] Token refreshed')
+    } else if (event === 'USER_UPDATED') {
+      console.log('🔶 [AuthStore] User updated')
     }
   })
 }
