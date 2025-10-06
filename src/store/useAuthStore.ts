@@ -6,6 +6,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase'
 interface AuthStore extends AuthState {
   login: (email: string, password: string) => Promise<boolean>
   register: (email: string, password: string, firstName: string, lastName: string) => Promise<boolean>
+  signInWithGoogle: () => Promise<void>
   logout: () => void
   updateLastLogin: () => void
   initializeAuth: () => Promise<void>
@@ -66,13 +67,42 @@ export const useAuthStore = create<AuthStore>()(
 
           if (session?.user) {
             // Get user profile from database
-            const { data: profile, error } = await supabase
+            let { data: profile, error } = await supabase
               .from('user_profiles')
               .select('*')
               .eq('id', session.user.id)
               .single()
 
-            if (!error && profile) {
+            // If profile doesn't exist (e.g., Google OAuth first login), create it
+            if (error && error.code === 'PGRST116') {
+              console.log('Profile not found, creating from OAuth user...')
+
+              // Extract name from user metadata or email
+              const userMeta = session.user.user_metadata
+              const firstName = userMeta?.full_name?.split(' ')[0] || userMeta?.name?.split(' ')[0] || session.user.email?.split('@')[0] || 'משתמש'
+              const lastName = userMeta?.full_name?.split(' ').slice(1).join(' ') || userMeta?.name?.split(' ').slice(1).join(' ') || 'חדש'
+
+              const { data: newProfile, error: createError } = await supabase
+                .from('user_profiles')
+                .insert({
+                  id: session.user.id,
+                  first_name: firstName,
+                  last_name: lastName,
+                  role: 'sales',
+                  status: 'active',
+                  avatar: userMeta?.avatar_url || userMeta?.picture,
+                })
+                .select()
+                .single()
+
+              if (!createError && newProfile) {
+                profile = newProfile
+              } else {
+                console.error('Failed to create profile:', createError)
+              }
+            }
+
+            if (profile) {
               const user: User = {
                 id: profile.id,
                 email: session.user.email || '',
@@ -320,6 +350,30 @@ export const useAuthStore = create<AuthStore>()(
         })
 
         return true
+      },
+
+      signInWithGoogle: async () => {
+        if (!isSupabaseConfigured()) {
+          console.error('Supabase not configured for Google OAuth')
+          return
+        }
+
+        try {
+          const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+              redirectTo: `${window.location.origin}/`,
+            },
+          })
+
+          if (error) {
+            console.error('Google sign-in error:', error.message)
+            throw error
+          }
+        } catch (error) {
+          console.error('Google sign-in error:', error)
+          throw error
+        }
       },
 
       logout: async () => {
