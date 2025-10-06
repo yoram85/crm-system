@@ -1,37 +1,11 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
-import { LogIn, Mail, Lock, AlertCircle } from 'lucide-react'
+import { LogIn, AlertCircle } from 'lucide-react'
 
 const Login = () => {
-  const navigate = useNavigate()
-  const { login, signInWithGoogle } = useAuthStore()
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  })
+  const { signInWithGoogle } = useAuthStore()
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setIsLoading(true)
-
-    try {
-      const success = await login(formData.email, formData.password)
-
-      if (success) {
-        navigate('/')
-      } else {
-        setError('אימייל או סיסמה שגויים')
-      }
-    } catch (err) {
-      setError('שגיאה בהתחברות. נסה שוב.')
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const handleGoogleSignIn = async () => {
     setError('')

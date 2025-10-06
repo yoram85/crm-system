@@ -1,0 +1,14 @@
+[sqlfluff]
+dialect = postgres
+templater = jinja
+
+[sqlfluff:rules]
+max_line_length = 120
+
+[sqlfluff:rules:L010]
+# Keywords should be consistently upper case
+capitalisation_policy = upper
+
+[sqlfluff:rules:L030]
+# Function names should be consistently upper case
+capitalisation_policy = upper

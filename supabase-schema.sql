@@ -1,4 +1,8 @@
--- CRM System Database Schema for Supabase
+-- CRM System Database Schema for Supabase (PostgreSQL)
+-- 
+-- IMPORTANT: This is PostgreSQL/Supabase SQL, not DB2!
+-- VS Code DB2 parser errors can be ignored.
+--
 -- הוראות התקנה:
 -- 1. לך ל-Supabase Dashboard > SQL Editor
 -- 2. העתק והרץ את כל הסקריפט הזה

@@ -1,70 +1,25 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { useAuthStore } from '../store/useAuthStore'
-import { UserPlus, Mail, Lock, User, AlertCircle, CheckCircle } from 'lucide-react'
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { useAuthStore } from "../store/useAuthStore";
+import { UserPlus, AlertCircle } from "lucide-react";
 
 const Register = () => {
-  const navigate = useNavigate()
-  const { register, signInWithGoogle } = useAuthStore()
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    confirmPassword: '',
-    firstName: '',
-    lastName: '',
-  })
-  const [error, setError] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-
-    // Validation
-    if (formData.password.length < 6) {
-      setError('הסיסמה חייבת להיות לפחות 6 תווים')
-      return
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      setError('הסיסמאות אינן תואמות')
-      return
-    }
-
-    setIsLoading(true)
-
-    try {
-      const success = await register(
-        formData.email,
-        formData.password,
-        formData.firstName,
-        formData.lastName
-      )
-
-      if (success) {
-        navigate('/')
-      } else {
-        setError('אימייל זה כבר רשום במערכת')
-      }
-    } catch (err) {
-      setError('שגיאה בהרשמה. נסה שוב.')
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  const { signInWithGoogle } = useAuthStore();
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleGoogleSignIn = async () => {
-    setError('')
-    setIsLoading(true)
+    setError("");
+    setIsLoading(true);
 
     try {
-      await signInWithGoogle()
+      await signInWithGoogle();
       // User will be redirected to Google, then back to our app
     } catch (err) {
-      setError('שגיאה בהרשמה עם Google. נסה שוב.')
-      setIsLoading(false)
+      setError("שגיאה בהרשמה עם Google. נסה שוב.");
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 flex items-center justify-center p-4">
@@ -74,7 +29,9 @@ const Register = () => {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-600 rounded-full mb-4">
             <UserPlus className="text-white" size={32} />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">הרשמה למערכת CRM</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            הרשמה למערכת CRM
+          </h1>
           <p className="text-gray-600">צור חשבון חדש</p>
         </div>
 
@@ -113,7 +70,9 @@ const Register = () => {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
               />
             </svg>
-            <span className="text-lg">{isLoading ? 'נרשם...' : 'הירשם עם Google'}</span>
+            <span className="text-lg">
+              {isLoading ? "נרשם..." : "הירשם עם Google"}
+            </span>
           </button>
 
           {/* Info Text */}
@@ -125,7 +84,7 @@ const Register = () => {
 
           {/* Login Link */}
           <p className="text-center text-sm text-gray-600 mt-6">
-            יש לך כבר חשבון?{' '}
+            יש לך כבר חשבון?{" "}
             <Link
               to="/login"
               className="text-purple-600 hover:text-purple-700 font-medium"
@@ -136,7 +95,7 @@ const Register = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Register
+export default Register;

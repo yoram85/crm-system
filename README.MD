@@ -350,6 +350,18 @@ crm-system/
 2. בדוק ש-RLS policies מוגדרות נכון
 3. נסה logout/login מחדש
 
+### הבעיה: שגיאות DB2 SQL Parser ב-VS Code
+
+**תיאור:** מוצגות שגיאות אדומות בקבצי SQL (supabase-schema.sql, create-admin.sql)
+
+**פתרון:**
+- השגיאות **לא קריטיות** - הקבצים עובדים מצוין ב-Supabase!
+- VS Code מנסה לפרס PostgreSQL SQL עם parser של DB2
+- הקבצים מוגדרים כ-plaintext ב-`.vscode/settings.json`
+- אם השגיאות עדיין מופיעות: Ctrl+Shift+P > "Developer: Reload Window"
+
+קרא עוד ב-[README-SQL.md](./README-SQL.md)
+
 ### הבעיה: PDF לא נפתח או עברית הפוכה
 
 **פתרון:**

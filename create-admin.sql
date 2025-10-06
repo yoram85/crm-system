@@ -1,6 +1,9 @@
--- Set Admin Role for Google OAuth User
+-- Set Admin Role for Google OAuth User (PostgreSQL/Supabase)
 -- Email: yoram1985@gmail.com
 -- Role: Admin (full permissions)
+--
+-- IMPORTANT: This is PostgreSQL/Supabase SQL, not DB2!
+-- VS Code DB2 parser errors can be ignored.
 
 -- הוראות:
 -- 1. התחבר לאתר עם Google (yoram1985@gmail.com) - פעם אחת
@@ -12,6 +15,16 @@
 -- הסקריפט יעדכן רק את ה-user_profile
 
 -- Update or insert the user profile to ensure admin role:
+-- First, try to update existing profile
+UPDATE user_profiles 
+SET 
+  role = 'admin',
+  status = 'active',
+  first_name = 'Woretaw',
+  last_name = 'Zaudo'
+WHERE id = (SELECT id FROM auth.users WHERE email = 'yoram1985@gmail.com');
+
+-- If no rows were updated (profile doesn't exist), insert new profile
 INSERT INTO user_profiles (id, first_name, last_name, role, status)
 SELECT
   id,
@@ -21,12 +34,10 @@ SELECT
   'active'
 FROM auth.users
 WHERE email = 'yoram1985@gmail.com'
-ON CONFLICT (id)
-DO UPDATE SET
-  role = 'admin',
-  status = 'active',
-  first_name = 'Woretaw',
-  last_name = 'Zaudo';
+  AND NOT EXISTS (
+    SELECT 1 FROM user_profiles 
+    WHERE id = (SELECT id FROM auth.users WHERE email = 'yoram1985@gmail.com')
+  );
 
 -- Verify the user was updated correctly:
 SELECT
