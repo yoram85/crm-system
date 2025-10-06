@@ -24,10 +24,22 @@ const getCurrentUserId = async (): Promise<string | null> => {
 // ==================== CUSTOMERS ====================
 
 export const fetchCustomers = async (): Promise<Customer[]> => {
-  if (!isSupabaseConfigured()) return []
+  console.log('🔵 fetchCustomers: Starting...')
+
+  if (!isSupabaseConfigured()) {
+    console.log('⚠️ fetchCustomers: Supabase not configured')
+    return []
+  }
 
   const userId = await getCurrentUserId()
-  if (!userId) return []
+  console.log('🔵 fetchCustomers: userId =', userId)
+
+  if (!userId) {
+    console.log('⚠️ fetchCustomers: No user ID')
+    return []
+  }
+
+  console.log('🔵 fetchCustomers: Querying customers for user:', userId)
 
   const { data, error } = await supabase
     .from('customers')
@@ -35,10 +47,14 @@ export const fetchCustomers = async (): Promise<Customer[]> => {
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
 
+  console.log('🔵 fetchCustomers: Query result:', { data, error, count: data?.length })
+
   if (error) {
-    console.error('Error fetching customers:', error)
+    console.error('❌ fetchCustomers: Error:', error)
     return []
   }
+
+  console.log(`✅ fetchCustomers: Found ${data.length} customers`)
 
   return data.map(row => ({
     id: row.id,
