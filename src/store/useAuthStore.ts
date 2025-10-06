@@ -506,8 +506,41 @@ if (isSupabaseConfigured()) {
       }
     } else if (event === 'SIGNED_IN' && session?.user) {
       console.log('🔶 [AuthStore] User signed in:', session.user.email)
-      // Refresh user data
-      await useAuthStore.getState().initializeAuth()
+
+      // Fetch user profile directly instead of calling initializeAuth
+      try {
+        console.log('🔶 [AuthStore] Fetching profile for signed in user...')
+        const { data: profile, error } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+
+        if (!error && profile) {
+          console.log('🔶 [AuthStore] Profile found:', profile)
+          const user: User = {
+            id: profile.id,
+            email: session.user.email || '',
+            firstName: profile.first_name,
+            lastName: profile.last_name,
+            role: profile.role,
+            status: profile.status,
+            avatar: profile.avatar,
+            phone: profile.phone,
+            department: profile.department,
+            monthlyTarget: profile.monthly_target,
+            createdAt: new Date(profile.created_at),
+            lastLogin: profile.last_login ? new Date(profile.last_login) : undefined,
+          }
+
+          console.log('✅ [AuthStore] Setting authenticated user from SIGNED_IN event')
+          useAuthStore.setState({ user, isAuthenticated: true })
+        } else {
+          console.error('❌ [AuthStore] Failed to fetch profile:', error)
+        }
+      } catch (error) {
+        console.error('❌ [AuthStore] Error fetching profile:', error)
+      }
     } else if (event === 'TOKEN_REFRESHED') {
       console.log('🔶 [AuthStore] Token refreshed')
     } else if (event === 'USER_UPDATED') {
