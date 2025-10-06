@@ -510,16 +510,31 @@ if (isSupabaseConfigured()) {
     } else if (event === 'SIGNED_IN' && session?.user) {
       console.log('🔶 [AuthStore] User signed in:', session.user.email)
 
+      // Small delay to let the session stabilize
+      console.log('🔶 [AuthStore] Waiting 500ms for session to stabilize...')
+      await new Promise(resolve => setTimeout(resolve, 500))
+
       // Fetch user profile directly instead of calling initializeAuth
       try {
         console.log('🔶 [AuthStore] Fetching profile for signed in user...')
         console.log('🔶 [AuthStore] User ID:', session.user.id)
         console.log('🔶 [AuthStore] User Email:', session.user.email)
-        let { data: profile, error } = await supabase
+
+        // Add timeout to the query
+        const queryPromise = supabase
           .from('user_profiles')
           .select('*')
           .eq('id', session.user.id)
           .single()
+
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Query timeout after 10s')), 10000)
+        )
+
+        console.log('🔶 [AuthStore] Starting query with 10s timeout...')
+        const queryResult = await Promise.race([queryPromise, timeoutPromise]) as any
+        let profile = queryResult.data
+        const error = queryResult.error
 
         console.log('🔶 [AuthStore] Query completed')
         console.log('🔶 [AuthStore] Profile data:', profile)
