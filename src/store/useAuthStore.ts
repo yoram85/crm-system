@@ -10,6 +10,7 @@ interface AuthStore extends AuthState {
   logout: () => void
   updateLastLogin: () => void
   initializeAuth: () => Promise<void>
+  setAuthenticatedUser: (user: User) => void
 }
 
 // Mock users database (fallback when Supabase is not configured)
@@ -488,6 +489,12 @@ export const useAuthStore = create<AuthStore>()(
           user: state.user ? { ...state.user, lastLogin: new Date() } : null,
         }))
       },
+
+      setAuthenticatedUser: (user: User) => {
+        console.log('🟢 [AuthStore] setAuthenticatedUser called with:', user)
+        set({ user, isAuthenticated: true })
+        console.log('🟢 [AuthStore] State set, persist should trigger now')
+      },
     }),
     {
       name: 'auth-storage',
@@ -563,9 +570,10 @@ if (isSupabaseConfigured()) {
           console.log('✅ [AuthStore] Setting authenticated user from SIGNED_IN event')
           console.log('✅ [AuthStore] User object:', user)
           console.log('✅ [AuthStore] About to set isAuthenticated = true')
-          useAuthStore.setState({ user, isAuthenticated: true })
+          useAuthStore.getState().setAuthenticatedUser(user)
           console.log('✅ [AuthStore] State updated! isAuthenticated should now be true')
           console.log('✅ [AuthStore] Current state:', useAuthStore.getState().isAuthenticated)
+          console.log('✅ [AuthStore] localStorage should now have auth-storage')
         } else {
           console.error('❌ [AuthStore] No profile returned from Netlify function')
         }
