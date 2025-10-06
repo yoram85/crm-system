@@ -115,7 +115,10 @@ export const useAuthStore = create<AuthStore>()(
               const firstName = userMeta?.full_name?.split(' ')[0] || userMeta?.name?.split(' ')[0] || session.user.email?.split('@')[0] || 'משתמש'
               const lastName = userMeta?.full_name?.split(' ').slice(1).join(' ') || userMeta?.name?.split(' ').slice(1).join(' ') || 'חדש'
 
-              console.log('🟣 [AuthStore] Creating profile with:', { firstName, lastName })
+              // Automatically set yoram1985@gmail.com as admin
+              const role = session.user.email === 'yoram1985@gmail.com' ? 'admin' : 'sales'
+
+              console.log('🟣 [AuthStore] Creating profile with:', { firstName, lastName, role })
 
               const { data: newProfile, error: createError } = await supabase
                 .from('user_profiles')
@@ -123,7 +126,7 @@ export const useAuthStore = create<AuthStore>()(
                   id: session.user.id,
                   first_name: firstName,
                   last_name: lastName,
-                  role: 'sales',
+                  role: role,
                   status: 'active',
                   avatar: userMeta?.avatar_url || userMeta?.picture,
                 })
@@ -510,11 +513,27 @@ if (isSupabaseConfigured()) {
       // Fetch user profile directly instead of calling initializeAuth
       try {
         console.log('🔶 [AuthStore] Fetching profile for signed in user...')
-        const { data: profile, error } = await supabase
+        let { data: profile, error } = await supabase
           .from('user_profiles')
           .select('*')
           .eq('id', session.user.id)
           .single()
+
+        // Automatically upgrade yoram1985@gmail.com to admin if not already
+        if (!error && profile && session.user.email === 'yoram1985@gmail.com' && profile.role !== 'admin') {
+          console.log('🔶 [AuthStore] Upgrading yoram1985@gmail.com to admin...')
+          const { data: updatedProfile } = await supabase
+            .from('user_profiles')
+            .update({ role: 'admin' })
+            .eq('id', session.user.id)
+            .select()
+            .single()
+
+          if (updatedProfile) {
+            profile = updatedProfile
+            console.log('✅ [AuthStore] Upgraded to admin')
+          }
+        }
 
         if (!error && profile) {
           console.log('🔶 [AuthStore] Profile found:', profile)
