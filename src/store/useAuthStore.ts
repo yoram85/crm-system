@@ -510,53 +510,40 @@ if (isSupabaseConfigured()) {
     } else if (event === 'SIGNED_IN' && session?.user) {
       console.log('🔶 [AuthStore] User signed in:', session.user.email)
 
-      // Small delay to let the session stabilize
-      console.log('🔶 [AuthStore] Waiting 500ms for session to stabilize...')
-      await new Promise(resolve => setTimeout(resolve, 500))
-
-      // Fetch user profile directly instead of calling initializeAuth
+      // Fetch user profile via Netlify Function (bypasses RLS issues)
       try {
         console.log('🔶 [AuthStore] Fetching profile for signed in user...')
         console.log('🔶 [AuthStore] User ID:', session.user.id)
         console.log('🔶 [AuthStore] User Email:', session.user.email)
 
-        // Add timeout to the query
-        const queryPromise = supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Query timeout after 10s')), 10000)
-        )
-
-        console.log('🔶 [AuthStore] Starting query with 10s timeout...')
-        const queryResult = await Promise.race([queryPromise, timeoutPromise]) as any
-        let profile = queryResult.data
-        const error = queryResult.error
-
-        console.log('🔶 [AuthStore] Query completed')
-        console.log('🔶 [AuthStore] Profile data:', profile)
-        console.log('🔶 [AuthStore] Error:', error)
-
-        // Automatically upgrade yoram1985@gmail.com to admin if not already
-        if (!error && profile && session.user.email === 'yoram1985@gmail.com' && profile.role !== 'admin') {
-          console.log('🔶 [AuthStore] Upgrading yoram1985@gmail.com to admin...')
-          const { data: updatedProfile } = await supabase
-            .from('user_profiles')
-            .update({ role: 'admin' })
-            .eq('id', session.user.id)
-            .select()
-            .single()
-
-          if (updatedProfile) {
-            profile = updatedProfile
-            console.log('✅ [AuthStore] Upgraded to admin')
-          }
+        // Get the access token
+        const { data: { session: currentSession } } = await supabase.auth.getSession()
+        if (!currentSession?.access_token) {
+          console.error('❌ [AuthStore] No access token available')
+          return
         }
 
-        if (!error && profile) {
+        console.log('🔶 [AuthStore] Calling Netlify function to get profile...')
+        const response = await fetch('/.netlify/functions/get-user-profile', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${currentSession.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        })
+
+        console.log('🔶 [AuthStore] Response status:', response.status)
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          console.error('❌ [AuthStore] Failed to fetch profile:', errorData)
+          return
+        }
+
+        const { profile } = await response.json()
+        console.log('🔶 [AuthStore] Profile fetched:', profile)
+
+        if (profile) {
           console.log('🔶 [AuthStore] Profile found:', profile)
           const user: User = {
             id: profile.id,
@@ -580,14 +567,11 @@ if (isSupabaseConfigured()) {
           console.log('✅ [AuthStore] State updated! isAuthenticated should now be true')
           console.log('✅ [AuthStore] Current state:', useAuthStore.getState().isAuthenticated)
         } else {
-          console.error('❌ [AuthStore] Failed to fetch profile!')
-          console.error('❌ [AuthStore] Error details:', error)
-          console.error('❌ [AuthStore] Error message:', error?.message)
-          console.error('❌ [AuthStore] Error code:', error?.code)
+          console.error('❌ [AuthStore] No profile returned from Netlify function')
         }
       } catch (error) {
         console.error('❌ [AuthStore] Exception while fetching profile:', error)
-        console.error('❌ [AuthStore] Exception details:', JSON.stringify(error, null, 2))
+        console.error('❌ [AuthStore] Exception details:', error instanceof Error ? error.message : String(error))
       }
     } else if (event === 'TOKEN_REFRESHED') {
       console.log('🔶 [AuthStore] Token refreshed')
