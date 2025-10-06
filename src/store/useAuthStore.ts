@@ -185,6 +185,8 @@ export const useAuthStore = create<AuthStore>()(
         // Use Supabase Auth if configured
         if (isSupabaseConfigured()) {
           try {
+            console.log('Registering user:', email)
+
             const { data, error } = await supabase.auth.signUp({
               email,
               password,
@@ -203,18 +205,64 @@ export const useAuthStore = create<AuthStore>()(
             }
 
             if (data.user) {
-              // Profile is created automatically by trigger
-              // Wait a bit for the trigger to complete
-              await new Promise((resolve) => setTimeout(resolve, 500))
+              console.log('User created in Auth:', data.user.id)
 
-              // Get the created profile
-              const { data: profile } = await supabase
+              // Create profile manually (don't rely on trigger)
+              const { data: profile, error: profileError } = await supabase
                 .from('user_profiles')
-                .select('*')
-                .eq('id', data.user.id)
+                .insert({
+                  id: data.user.id,
+                  first_name: firstName,
+                  last_name: lastName,
+                  role: 'sales',
+                  status: 'active',
+                })
+                .select()
                 .single()
 
+              if (profileError) {
+                console.error('Profile creation error:', profileError)
+                // Profile might already exist from trigger, try to fetch it
+                await new Promise((resolve) => setTimeout(resolve, 1000))
+
+                const { data: existingProfile } = await supabase
+                  .from('user_profiles')
+                  .select('*')
+                  .eq('id', data.user.id)
+                  .single()
+
+                if (existingProfile) {
+                  console.log('Using existing profile:', existingProfile)
+                  const user: User = {
+                    id: existingProfile.id,
+                    email: data.user.email || '',
+                    firstName: existingProfile.first_name,
+                    lastName: existingProfile.last_name,
+                    role: existingProfile.role,
+                    status: existingProfile.status,
+                    avatar: existingProfile.avatar,
+                    phone: existingProfile.phone,
+                    department: existingProfile.department,
+                    monthlyTarget: existingProfile.monthly_target,
+                    createdAt: new Date(existingProfile.created_at),
+                    lastLogin: new Date(),
+                  }
+
+                  set({
+                    user,
+                    isAuthenticated: true,
+                  })
+
+                  return true
+                }
+
+                console.error('Failed to create or fetch profile')
+                return false
+              }
+
               if (profile) {
+                console.log('Profile created successfully:', profile)
+
                 const user: User = {
                   id: profile.id,
                   email: data.user.email || '',
