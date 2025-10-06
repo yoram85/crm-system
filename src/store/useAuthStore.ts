@@ -57,30 +57,49 @@ export const useAuthStore = create<AuthStore>()(
 
       // Initialize auth - check for existing Supabase session
       initializeAuth: async () => {
+        console.log('🟣 [AuthStore] initializeAuth called')
+
         if (!isSupabaseConfigured()) {
-          console.log('Supabase not configured, using mock auth')
+          console.log('⚠️ [AuthStore] Supabase not configured, using mock auth')
           return
         }
 
+        console.log('🟣 [AuthStore] Checking for existing session...')
+
         try {
-          const { data: { session } } = await supabase.auth.getSession()
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+          console.log('🟣 [AuthStore] Session check result:', {
+            hasSession: !!session,
+            hasUser: !!session?.user,
+            email: session?.user?.email,
+            sessionError
+          })
 
           if (session?.user) {
+            console.log('✅ [AuthStore] Found session for user:', session.user.email)
+            console.log('🟣 [AuthStore] User metadata:', session.user.user_metadata)
+
             // Get user profile from database
+            console.log('🟣 [AuthStore] Fetching user profile from database...')
             let { data: profile, error } = await supabase
               .from('user_profiles')
               .select('*')
               .eq('id', session.user.id)
               .single()
 
+            console.log('🟣 [AuthStore] Profile fetch result:', { profile, error })
+
             // If profile doesn't exist (e.g., Google OAuth first login), create it
             if (error && error.code === 'PGRST116') {
-              console.log('Profile not found, creating from OAuth user...')
+              console.log('⚠️ [AuthStore] Profile not found, creating from OAuth user...')
 
               // Extract name from user metadata or email
               const userMeta = session.user.user_metadata
               const firstName = userMeta?.full_name?.split(' ')[0] || userMeta?.name?.split(' ')[0] || session.user.email?.split('@')[0] || 'משתמש'
               const lastName = userMeta?.full_name?.split(' ').slice(1).join(' ') || userMeta?.name?.split(' ').slice(1).join(' ') || 'חדש'
+
+              console.log('🟣 [AuthStore] Creating profile with:', { firstName, lastName })
 
               const { data: newProfile, error: createError } = await supabase
                 .from('user_profiles')
@@ -95,14 +114,19 @@ export const useAuthStore = create<AuthStore>()(
                 .select()
                 .single()
 
+              console.log('🟣 [AuthStore] Profile creation result:', { newProfile, createError })
+
               if (!createError && newProfile) {
                 profile = newProfile
+                console.log('✅ [AuthStore] Profile created successfully')
               } else {
-                console.error('Failed to create profile:', createError)
+                console.error('❌ [AuthStore] Failed to create profile:', createError)
               }
             }
 
             if (profile) {
+              console.log('✅ [AuthStore] Profile found/created:', profile)
+
               const user: User = {
                 id: profile.id,
                 email: session.user.email || '',
@@ -118,11 +142,17 @@ export const useAuthStore = create<AuthStore>()(
                 lastLogin: profile.last_login ? new Date(profile.last_login) : undefined,
               }
 
+              console.log('✅ [AuthStore] Setting user state:', user)
               set({ user, isAuthenticated: true })
+              console.log('✅ [AuthStore] User authenticated successfully!')
+            } else {
+              console.error('❌ [AuthStore] No profile available after creation attempt')
             }
+          } else {
+            console.log('ℹ️ [AuthStore] No active session found')
           }
         } catch (error) {
-          console.error('Error initializing auth:', error)
+          console.error('❌ [AuthStore] Error initializing auth:', error)
         }
       },
 
@@ -353,25 +383,41 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       signInWithGoogle: async () => {
+        console.log('🟢 [AuthStore] signInWithGoogle called')
+        console.log('🟢 [AuthStore] Checking if Supabase is configured...')
+
         if (!isSupabaseConfigured()) {
-          console.error('Supabase not configured for Google OAuth')
-          return
+          console.error('❌ [AuthStore] Supabase not configured for Google OAuth')
+          throw new Error('Supabase לא מוגדר. בדוק את קובץ .env.local')
         }
 
+        console.log('✅ [AuthStore] Supabase is configured')
+
+        const redirectUrl = `${window.location.origin}/`
+        console.log('🟢 [AuthStore] Redirect URL:', redirectUrl)
+
         try {
-          const { error } = await supabase.auth.signInWithOAuth({
+          console.log('🟢 [AuthStore] Calling supabase.auth.signInWithOAuth...')
+          const { data, error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-              redirectTo: `${window.location.origin}/`,
+              redirectTo: redirectUrl,
             },
           })
 
+          console.log('🟢 [AuthStore] OAuth response data:', data)
+
           if (error) {
-            console.error('Google sign-in error:', error.message)
+            console.error('❌ [AuthStore] Google sign-in error:', error)
+            console.error('❌ [AuthStore] Error code:', error.code)
+            console.error('❌ [AuthStore] Error message:', error.message)
+            console.error('❌ [AuthStore] Error status:', error.status)
             throw error
           }
-        } catch (error) {
-          console.error('Google sign-in error:', error)
+
+          console.log('✅ [AuthStore] OAuth initiated successfully, redirecting to Google...')
+        } catch (error: any) {
+          console.error('❌ [AuthStore] Caught error in signInWithGoogle:', error)
           throw error
         }
       },

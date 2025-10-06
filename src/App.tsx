@@ -26,7 +26,9 @@ function App() {
   // Initialize Supabase auth on app load
   useEffect(() => {
     const init = async () => {
+      console.log('🔷 [App] Initializing auth...')
       await initializeAuth()
+      console.log('🔷 [App] Auth initialization complete')
     }
     init()
   }, [initializeAuth])

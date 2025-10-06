@@ -8,14 +8,23 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false)
 
   const handleGoogleSignIn = async () => {
+    console.log('🔵 [Login] Starting Google Sign-In...')
+    console.log('🔵 [Login] Current URL:', window.location.href)
+    console.log('🔵 [Login] Origin:', window.location.origin)
+
     setError('')
     setIsLoading(true)
 
     try {
+      console.log('🔵 [Login] Calling signInWithGoogle()...')
       await signInWithGoogle()
+      console.log('✅ [Login] signInWithGoogle() completed - should redirect to Google now')
       // User will be redirected to Google, then back to our app
-    } catch (err) {
-      setError('שגיאה בהתחברות עם Google. נסה שוב.')
+    } catch (err: any) {
+      console.error('❌ [Login] Google Sign-In Error:', err)
+      console.error('❌ [Login] Error message:', err?.message)
+      console.error('❌ [Login] Error details:', JSON.stringify(err, null, 2))
+      setError(`שגיאה בהתחברות עם Google: ${err?.message || 'נסה שוב'}`)
       setIsLoading(false)
     }
   }
