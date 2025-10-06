@@ -415,7 +415,15 @@ export const useAuthStore = create<AuthStore>()(
             throw error
           }
 
-          console.log('✅ [AuthStore] OAuth initiated successfully, redirecting to Google...')
+          // Manually redirect to Google OAuth URL
+          if (data?.url) {
+            console.log('✅ [AuthStore] OAuth initiated successfully, redirecting to Google...')
+            console.log('🟢 [AuthStore] Redirecting to:', data.url)
+            window.location.href = data.url
+          } else {
+            console.error('❌ [AuthStore] No OAuth URL returned from Supabase')
+            throw new Error('לא התקבל URL להתחברות')
+          }
         } catch (error: any) {
           console.error('❌ [AuthStore] Caught error in signInWithGoogle:', error)
           throw error

@@ -19,7 +19,10 @@
       "Bash(curl:*)",
       "Bash(node:*)",
       "Bash(npm uninstall:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(test:*)",
+      "Bash(cd:*)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []
