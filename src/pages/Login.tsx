@@ -29,9 +29,14 @@ const Login = () => {
 
   // Redirect to home if already authenticated
   useEffect(() => {
+    console.log('🔵 [Login] Auth check - isAuthenticated:', isAuthenticated)
     if (isAuthenticated) {
       console.log('✅ [Login] User is authenticated, redirecting to home...')
+      console.log('✅ [Login] Navigating to /')
       navigate('/', { replace: true })
+      console.log('✅ [Login] Navigate called')
+    } else {
+      console.log('⚪ [Login] Not authenticated yet, staying on login page')
     }
   }, [isAuthenticated, navigate])
 

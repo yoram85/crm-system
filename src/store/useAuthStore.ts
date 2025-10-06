@@ -553,7 +553,11 @@ if (isSupabaseConfigured()) {
           }
 
           console.log('✅ [AuthStore] Setting authenticated user from SIGNED_IN event')
+          console.log('✅ [AuthStore] User object:', user)
+          console.log('✅ [AuthStore] About to set isAuthenticated = true')
           useAuthStore.setState({ user, isAuthenticated: true })
+          console.log('✅ [AuthStore] State updated! isAuthenticated should now be true')
+          console.log('✅ [AuthStore] Current state:', useAuthStore.getState().isAuthenticated)
         } else {
           console.error('❌ [AuthStore] Failed to fetch profile:', error)
         }
