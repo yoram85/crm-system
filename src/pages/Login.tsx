@@ -9,6 +9,24 @@ const Login = () => {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
+  // Check for OAuth hash in URL (callback from Google)
+  useEffect(() => {
+    const hash = window.location.hash
+    console.log('🔵 [Login] Current URL hash:', hash)
+
+    if (hash && (hash.includes('access_token') || hash.includes('error'))) {
+      console.log('🔵 [Login] OAuth callback detected in hash!')
+      console.log('🔵 [Login] Supabase should process this automatically...')
+      setIsLoading(true)
+
+      // Give Supabase time to process the hash
+      setTimeout(() => {
+        console.log('🔵 [Login] Checking auth state after callback...')
+        // The onAuthStateChange listener should trigger
+      }, 1000)
+    }
+  }, [])
+
   // Redirect to home if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
