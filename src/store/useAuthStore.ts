@@ -67,7 +67,11 @@ export const useAuthStore = create<AuthStore>()(
         console.log('🟣 [AuthStore] Checking for existing session...')
 
         try {
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+          console.log('🟣 [AuthStore] About to call supabase.auth.getSession()...')
+          const sessionResult = await supabase.auth.getSession()
+          console.log('🟣 [AuthStore] getSession() returned:', sessionResult)
+
+          const { data: { session }, error: sessionError } = sessionResult
 
           console.log('🟣 [AuthStore] Session check result:', {
             hasSession: !!session,
