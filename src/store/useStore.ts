@@ -666,7 +666,14 @@ export const useStore = create<CRMState>()((set, get) => ({
 
       hasPermission: (permission) => {
         const state = get()
-        const user = state.currentUser
+        // First try to get user from currentUser (useStore)
+        let user = state.currentUser
+
+        // If not found, try to get from useAuthStore
+        if (!user) {
+          const { useAuthStore } = require('./useAuthStore')
+          user = useAuthStore.getState().user
+        }
 
         if (!user) return false
         if (user.role === 'admin') return true
