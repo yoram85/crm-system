@@ -22,13 +22,9 @@ const Layout = ({ children }: LayoutProps) => {
     // Logout from auth
     await logout()
 
-    console.log('Layout: Navigating to login')
-    navigate('/login')
-
-    // Force reload to clear everything
-    setTimeout(() => {
-      window.location.reload()
-    }, 100)
+    console.log('Layout: Redirecting to login')
+    // Redirect to login page with full reload
+    window.location.href = '/login'
   }
 
   const menuItems = [
