@@ -3,9 +3,21 @@ import { Customer, Deal, Task, Product, Service, Activity } from '../types'
 
 // Helper to get current user ID
 const getCurrentUserId = async (): Promise<string | null> => {
-  if (!isSupabaseConfigured()) return null
+  if (!isSupabaseConfigured()) {
+    console.log('getCurrentUserId: Supabase not configured')
+    return null
+  }
 
-  const { data: { session } } = await supabase.auth.getSession()
+  const { data: { session }, error } = await supabase.auth.getSession()
+
+  if (error) {
+    console.error('getCurrentUserId: Error getting session:', error)
+    return null
+  }
+
+  console.log('getCurrentUserId: session =', session)
+  console.log('getCurrentUserId: user ID =', session?.user?.id)
+
   return session?.user?.id || null
 }
 
