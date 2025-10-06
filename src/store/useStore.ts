@@ -3,6 +3,7 @@ import { Customer, Deal, Task, Product, Service, WebhookConfig, IntegrationConfi
 import { notifyWebhooks, syncToIntegrations } from '../utils/integrations'
 import { isSupabaseConfigured } from '../lib/supabase'
 import * as supabaseSync from '../lib/supabaseSync'
+import { useAuthStore } from './useAuthStore'
 
 interface CRMState {
   customers: Customer[]
@@ -671,7 +672,6 @@ export const useStore = create<CRMState>()((set, get) => ({
 
         // If not found, try to get from useAuthStore
         if (!user) {
-          const { useAuthStore } = require('./useAuthStore')
           user = useAuthStore.getState().user
         }
 
