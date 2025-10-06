@@ -75,25 +75,35 @@ export const createCustomer = async (customer: Omit<Customer, 'id' | 'createdAt'
     email: customer.email,
   })
 
+  const insertData = {
+    user_id: userId,
+    first_name: customer.firstName,
+    last_name: customer.lastName,
+    name: customer.name,
+    email: customer.email,
+    phone: customer.phone,
+    company: customer.company,
+    profile_image: customer.profileImage,
+    status: customer.status,
+    notes: customer.notes || '',
+  }
+
+  console.log('createCustomer: About to insert:', insertData)
+
   const { data, error } = await supabase
     .from('customers')
-    .insert({
-      user_id: userId,
-      first_name: customer.firstName,
-      last_name: customer.lastName,
-      name: customer.name,
-      email: customer.email,
-      phone: customer.phone,
-      company: customer.company,
-      profile_image: customer.profileImage,
-      status: customer.status,
-      notes: customer.notes || '',
-    })
+    .insert(insertData)
     .select()
     .single()
 
+  console.log('createCustomer: Insert result:', { data, error })
+
   if (error) {
     console.error('createCustomer: Error creating customer:', error)
+    console.error('createCustomer: Error code:', error.code)
+    console.error('createCustomer: Error message:', error.message)
+    console.error('createCustomer: Error details:', error.details)
+    console.error('createCustomer: Error hint:', error.hint)
     return null
   }
 
