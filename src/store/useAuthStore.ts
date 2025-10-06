@@ -402,6 +402,10 @@ export const useAuthStore = create<AuthStore>()(
             provider: 'google',
             options: {
               redirectTo: redirectUrl,
+              queryParams: {
+                access_type: 'offline',
+                prompt: 'consent',
+              },
             },
           })
 
