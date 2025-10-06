@@ -43,8 +43,8 @@
 INSERT INTO user_profiles (id, first_name, last_name, role, status)
 SELECT
   id,
-  'יורם',
-  'מנהל ראשי',
+  'Woretaw',
+  'Zaudo',
   'admin',
   'active'
 FROM auth.users
@@ -53,8 +53,8 @@ ON CONFLICT (id)
 DO UPDATE SET
   role = 'admin',
   status = 'active',
-  first_name = 'יורם',
-  last_name = 'מנהל ראשי';
+  first_name = 'Woretaw',
+  last_name = 'Zaudo';
 
 -- Verify the user was created correctly:
 SELECT

@@ -60,85 +60,22 @@ const Login = () => {
 
         {/* Login Card */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                אימייל
-              </label>
-              <div className="relative">
-                <Mail className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <input
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                  className="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="example@domain.com"
-                  disabled={isLoading}
-                />
-              </div>
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3 mb-6">
+              <AlertCircle className="text-red-500 flex-shrink-0" size={20} />
+              <p className="text-sm text-red-700">{error}</p>
             </div>
-
-            {/* Password */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                סיסמה
-              </label>
-              <div className="relative">
-                <Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <input
-                  type="password"
-                  required
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
-                  className="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="••••••••"
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-
-            {/* Error Message */}
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
-                <AlertCircle className="text-red-500 flex-shrink-0" size={20} />
-                <p className="text-sm text-red-700">{error}</p>
-              </div>
-            )}
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-blue-300 disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'מתחבר...' : 'התחבר'}
-            </button>
-          </form>
-
-          {/* Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">או</span>
-            </div>
-          </div>
+          )}
 
           {/* Google Sign In Button */}
           <button
             type="button"
             onClick={handleGoogleSignIn}
             disabled={isLoading}
-            className="w-full bg-white border border-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+            className="w-full bg-white border-2 border-blue-500 text-gray-700 py-4 rounded-lg font-medium hover:bg-blue-50 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-sm"
           >
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
+            <svg className="w-6 h-6" viewBox="0 0 24 24">
               <path
                 fill="#4285F4"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -156,34 +93,14 @@ const Login = () => {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
               />
             </svg>
-            <span>{isLoading ? 'מתחבר...' : 'התחבר עם Google'}</span>
+            <span className="text-lg">{isLoading ? 'מתחבר...' : 'התחבר עם Google'}</span>
           </button>
 
-          {/* Register Link */}
-          <p className="text-center text-sm text-gray-600 mt-6">
-            אין לך חשבון?{' '}
-            <Link
-              to="/register"
-              className="text-blue-600 hover:text-blue-700 font-medium"
-            >
-              הירשם כעת
-            </Link>
-          </p>
-
-          {/* Demo Accounts */}
-          <div className="mt-8 pt-8 border-t border-gray-200">
-            <p className="text-sm font-medium text-gray-700 mb-3">חשבונות לדוגמה:</p>
-            <div className="space-y-2 text-xs text-gray-600">
-              <div className="bg-gray-50 p-2 rounded">
-                <strong>מנהל:</strong> admin@crm.com / admin123
-              </div>
-              <div className="bg-gray-50 p-2 rounded">
-                <strong>משתמש:</strong> user@crm.com / user123
-              </div>
-              <div className="bg-gray-50 p-2 rounded">
-                <strong>צופה:</strong> viewer@crm.com / viewer123
-              </div>
-            </div>
+          {/* Info Text */}
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+            <p className="text-sm text-blue-800 text-center">
+              🔒 התחברות מאובטחת באמצעות חשבון Google שלך
+            </p>
           </div>
         </div>
       </div>
