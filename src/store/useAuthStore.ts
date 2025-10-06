@@ -516,18 +516,18 @@ if (isSupabaseConfigured()) {
         console.log('🔶 [AuthStore] User ID:', session.user.id)
         console.log('🔶 [AuthStore] User Email:', session.user.email)
 
-        // Get the access token
-        const { data: { session: currentSession } } = await supabase.auth.getSession()
-        if (!currentSession?.access_token) {
-          console.error('❌ [AuthStore] No access token available')
+        // Use the session we already have from the event (no need to call getSession again)
+        if (!session?.access_token) {
+          console.error('❌ [AuthStore] No access token in session')
           return
         }
 
+        console.log('🔶 [AuthStore] Access token found, length:', session.access_token.length)
         console.log('🔶 [AuthStore] Calling Netlify function to get profile...')
         const response = await fetch('/.netlify/functions/get-user-profile', {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${currentSession.access_token}`,
+            'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
           },
         })
