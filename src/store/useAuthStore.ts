@@ -325,20 +325,20 @@ export const useAuthStore = create<AuthStore>()(
       logout: async () => {
         console.log('Logging out...')
 
-        // Sign out from Supabase
-        if (isSupabaseConfigured()) {
-          console.log('Signing out from Supabase...')
-          await supabase.auth.signOut()
-        }
-
-        // Clear auth state
+        // Clear auth state first
         set({ user: null, isAuthenticated: false })
 
         // Clear LocalStorage
         localStorage.removeItem('auth-storage')
         localStorage.removeItem('crm-storage')
 
-        console.log('Logout complete - all storage cleared')
+        // Sign out from Supabase (this will trigger onAuthStateChange but state is already cleared)
+        if (isSupabaseConfigured()) {
+          console.log('Signing out from Supabase...')
+          await supabase.auth.signOut()
+        }
+
+        console.log('Logout complete')
       },
 
       updateLastLogin: async () => {
@@ -365,7 +365,11 @@ export const useAuthStore = create<AuthStore>()(
 if (isSupabaseConfigured()) {
   supabase.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_OUT') {
-      useAuthStore.getState().logout()
+      // Just clear the state, don't call logout() to avoid infinite loop
+      const state = useAuthStore.getState()
+      if (state.isAuthenticated) {
+        useAuthStore.setState({ user: null, isAuthenticated: false })
+      }
     } else if (event === 'SIGNED_IN' && session?.user) {
       // Refresh user data
       await useAuthStore.getState().initializeAuth()
