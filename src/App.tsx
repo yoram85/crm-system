@@ -20,20 +20,24 @@ import { useAuthStore } from './store/useAuthStore'
 import { useStore } from './store/useStore'
 
 function App() {
-  const { isAuthenticated, initializeAuth } = useAuthStore()
+  const { isAuthenticated, initializeAuth, user } = useAuthStore()
   const loadAllData = useStore((state) => state.loadAllData)
 
   // Initialize Supabase auth on app load
   useEffect(() => {
-    initializeAuth()
-  }, [])
+    const init = async () => {
+      await initializeAuth()
+    }
+    init()
+  }, [initializeAuth])
 
   // Load data from Supabase when user is authenticated
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && user) {
+      console.log('Loading data for user:', user.email)
       loadAllData()
     }
-  }, [isAuthenticated, loadAllData])
+  }, [isAuthenticated, user, loadAllData])
 
   return (
     <Router>

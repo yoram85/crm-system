@@ -93,8 +93,12 @@ export const useStore = create<CRMState>()(
 
       // Load all data from Supabase
       loadAllData: async () => {
-        if (!isSupabaseConfigured()) return
+        if (!isSupabaseConfigured()) {
+          console.log('Supabase not configured, skipping data load')
+          return
+        }
 
+        console.log('Loading data from Supabase...')
         set({ isLoading: true })
 
         try {
@@ -106,6 +110,15 @@ export const useStore = create<CRMState>()(
             supabaseSync.fetchServices(),
             supabaseSync.fetchActivities(100),
           ])
+
+          console.log('Data loaded from Supabase:', {
+            customers: customers.length,
+            deals: deals.length,
+            tasks: tasks.length,
+            products: products.length,
+            services: services.length,
+            activities: activities.length,
+          })
 
           set({
             customers,
