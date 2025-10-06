@@ -1,43 +1,15 @@
--- Create Admin User for Yoram
+-- Set Admin Role for Google OAuth User
 -- Email: yoram1985@gmail.com
--- Password: 309592574
 -- Role: Admin (full permissions)
 
 -- הוראות:
--- 1. לך ל-Supabase Dashboard > SQL Editor
--- 2. העתק והרץ את הסקריפט הזה
--- 3. לאחר מכן תוכל להתחבר עם המייל והסיסמה
+-- 1. התחבר לאתר עם Google (yoram1985@gmail.com) - פעם אחת
+-- 2. לך ל-Supabase Dashboard > SQL Editor
+-- 3. העתק והרץ את הסקריפט הזה (שורות 14-26)
+-- 4. זה יעדכן את המשתמש שלך להיות Admin
 
--- Note: This creates the user in Supabase Auth
--- The user_profile will be created automatically by the trigger
-
--- You'll need to create this user through the Supabase Dashboard UI:
--- 1. Go to Authentication > Users
--- 2. Click "Add user" > "Create new user"
--- 3. Enter:
---    - Email: yoram1985@gmail.com
---    - Password: 309592574
---    - Auto Confirm User: YES (important!)
---    - User Metadata (JSON):
---      {
---        "first_name": "יורם",
---        "last_name": "מנהל ראשי",
---        "role": "admin"
---      }
--- 4. Click "Create user"
-
--- After the user is created, run this to ensure admin role:
-
--- First, get the user ID (will be shown after creation)
--- Then run this (replace USER_ID with actual ID):
-
--- UPDATE auth.users
--- SET raw_user_meta_data = jsonb_build_object(
---   'first_name', 'יורם',
---   'last_name', 'מנהל ראשי',
---   'role', 'admin'
--- )
--- WHERE email = 'yoram1985@gmail.com';
+-- Note: המשתמש כבר קיים ב-auth.users (לאחר התחברות Google)
+-- הסקריפט יעדכן רק את ה-user_profile
 
 -- Update or insert the user profile to ensure admin role:
 INSERT INTO user_profiles (id, first_name, last_name, role, status)
@@ -56,7 +28,7 @@ DO UPDATE SET
   first_name = 'Woretaw',
   last_name = 'Zaudo';
 
--- Verify the user was created correctly:
+-- Verify the user was updated correctly:
 SELECT
   u.id,
   u.email,
