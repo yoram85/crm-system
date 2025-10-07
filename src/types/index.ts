@@ -7,7 +7,7 @@ export interface Customer {
   phone: string
   company: string
   profileImage?: string
-  status: 'active' | 'inactive' | 'lead'
+  status: 'active' | 'inactive' | 'lead' | 'customer'
   createdAt: Date
   notes: string
 }
@@ -44,6 +44,7 @@ export interface Task {
   priority: 'low' | 'medium' | 'high'
   status: 'pending' | 'in-progress' | 'completed'
   createdAt: Date
+  notes?: string
 }
 
 export interface Product {

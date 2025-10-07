@@ -13,7 +13,7 @@ export default function Customers() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'lead'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'lead' | 'customer'>('all');
   const [emailComposerOpen, setEmailComposerOpen] = useState(false);
   const [selectedCustomerForEmail, setSelectedCustomerForEmail] = useState<Customer | null>(null);
   const [whatsappComposerOpen, setWhatsappComposerOpen] = useState(false);
@@ -29,7 +29,7 @@ export default function Customers() {
     phone: '',
     company: '',
     profileImage: '',
-    status: 'active' as 'active' | 'inactive' | 'lead',
+    status: 'active' as 'active' | 'inactive' | 'lead' | 'customer',
     notes: '',
   });
 
@@ -626,11 +626,12 @@ export default function Customers() {
                 </label>
                 <select
                   value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' | 'lead' })}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' | 'lead' | 'customer' })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="lead">ליד</option>
                   <option value="active">פעיל</option>
+                  <option value="customer">לקוח</option>
                   <option value="inactive">לא פעיל</option>
                 </select>
               </div>

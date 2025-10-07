@@ -32,6 +32,12 @@ export const sendToWebhook = async (
         data: data,
         timestamp: new Date().toISOString(),
         webhookName: webhook.name,
+        // Additional metadata for N8N
+        metadata: {
+          source: 'CRM',
+          environment: import.meta.env.MODE || 'production',
+          version: '1.0.0'
+        }
       }),
     });
 

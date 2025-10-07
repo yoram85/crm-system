@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { Customer, Deal, Task, Product, Service, WebhookConfig, IntegrationConfig, User, Activity, Permission } from '../types'
 import { notifyWebhooks, syncToIntegrations } from '../utils/integrations'
+import { createInvoiceFromTask, sendInvoiceToWebhook } from '../utils/invoiceGenerator'
 import { isSupabaseConfigured } from '../lib/supabase'
 import * as supabaseSync from '../lib/supabaseSync'
 import { useAuthStore } from './useAuthStore'
@@ -186,6 +187,8 @@ export const useStore = create<CRMState>()((set, get) => ({
       },
 
       updateCustomer: async (id, customer) => {
+        // Get old customer before update
+        const oldCustomer = get().customers.find(c => c.id === id)
         let updatedCustomer: Customer | null = null
 
         set((state) => {
@@ -212,17 +215,41 @@ export const useStore = create<CRMState>()((set, get) => ({
         if (updatedCustomer) {
           const state = get()
           const finalCustomer: Customer = updatedCustomer as Customer
-          notifyWebhooks(state.webhooks, 'customer', 'update', finalCustomer, getUpdateWebhook())
-          syncToIntegrations(state.integrations, 'customers', 'update', finalCustomer)
 
-          await get().addActivity({
-            userId: state.currentUser?.id || 'system',
-            type: 'customer',
-            action: 'updated',
-            entityId: finalCustomer.id,
-            entityName: finalCustomer.name,
-            description: `עודכן לקוח: ${finalCustomer.name}`,
-          })
+          // Check if status changed from 'lead' to 'customer' (converted lead!)
+          const statusChanged = oldCustomer && oldCustomer.status !== finalCustomer.status
+          const becameCustomer = statusChanged && finalCustomer.status === 'customer'
+
+          // Send special event for lead conversion
+          if (becameCustomer) {
+            notifyWebhooks(state.webhooks, 'customer', 'update', {
+              ...finalCustomer,
+              _specialEvent: 'lead_converted',
+              _previousStatus: oldCustomer?.status
+            }, getUpdateWebhook())
+
+            await get().addActivity({
+              userId: state.currentUser?.id || 'system',
+              type: 'customer',
+              action: 'updated',
+              entityId: finalCustomer.id,
+              entityName: finalCustomer.name,
+              description: `🎉 ליד הומר ללקוח: ${finalCustomer.name}`,
+            })
+          } else {
+            notifyWebhooks(state.webhooks, 'customer', 'update', finalCustomer, getUpdateWebhook())
+
+            await get().addActivity({
+              userId: state.currentUser?.id || 'system',
+              type: 'customer',
+              action: 'updated',
+              entityId: finalCustomer.id,
+              entityName: finalCustomer.name,
+              description: `עודכן לקוח: ${finalCustomer.name}`,
+            })
+          }
+
+          syncToIntegrations(state.integrations, 'customers', 'update', finalCustomer)
         }
       },
 
@@ -290,6 +317,8 @@ export const useStore = create<CRMState>()((set, get) => ({
       },
 
       updateDeal: async (id, deal) => {
+        // Get old deal before update
+        const oldDeal = get().deals.find(d => d.id === id)
         let updatedDeal: Deal | null = null
 
         set((state) => {
@@ -311,17 +340,50 @@ export const useStore = create<CRMState>()((set, get) => ({
         if (updatedDeal) {
           const state = get()
           const finalDeal: Deal = updatedDeal as Deal
-          notifyWebhooks(state.webhooks, 'deal', 'update', finalDeal, getUpdateWebhook())
-          syncToIntegrations(state.integrations, 'deals', 'update', finalDeal)
 
-          await get().addActivity({
-            userId: state.currentUser?.id || 'system',
-            type: 'deal',
-            action: 'updated',
-            entityId: finalDeal.id,
-            entityName: finalDeal.title,
-            description: `עודכנה עסקה: ${finalDeal.title}`,
-          })
+          // Check if stage changed (deal progressed!)
+          const stageChanged = oldDeal && oldDeal.stage !== finalDeal.stage
+
+          // Stage names for Hebrew
+          const stageNames: Record<string, string> = {
+            lead: 'ליד',
+            qualified: 'מוסמך',
+            proposal: 'הצעת מחיר',
+            negotiation: 'משא ומתן',
+            closed_won: 'נסגר בהצלחה',
+            closed_lost: 'אבוד'
+          }
+
+          if (stageChanged) {
+            notifyWebhooks(state.webhooks, 'deal', 'update', {
+              ...finalDeal,
+              _specialEvent: 'stage_changed',
+              _previousStage: oldDeal?.stage,
+              _newStage: finalDeal.stage
+            }, getUpdateWebhook())
+
+            await get().addActivity({
+              userId: state.currentUser?.id || 'system',
+              type: 'deal',
+              action: 'updated',
+              entityId: finalDeal.id,
+              entityName: finalDeal.title,
+              description: `📊 עסקה התקדמה: ${finalDeal.title} ← ${stageNames[finalDeal.stage] || finalDeal.stage}`,
+            })
+          } else {
+            notifyWebhooks(state.webhooks, 'deal', 'update', finalDeal, getUpdateWebhook())
+
+            await get().addActivity({
+              userId: state.currentUser?.id || 'system',
+              type: 'deal',
+              action: 'updated',
+              entityId: finalDeal.id,
+              entityName: finalDeal.title,
+              description: `עודכנה עסקה: ${finalDeal.title}`,
+            })
+          }
+
+          syncToIntegrations(state.integrations, 'deals', 'update', finalDeal)
         }
       },
 
@@ -387,6 +449,8 @@ export const useStore = create<CRMState>()((set, get) => ({
       },
 
       updateTask: async (id, task) => {
+        // Get old task before update
+        const oldTask = get().tasks.find(t => t.id === id)
         let updatedTask: Task | null = null
 
         set((state) => {
@@ -408,17 +472,90 @@ export const useStore = create<CRMState>()((set, get) => ({
         if (updatedTask) {
           const state = get()
           const finalTask: Task = updatedTask as Task
-          notifyWebhooks(state.webhooks, 'task', 'update', finalTask, getUpdateWebhook())
-          syncToIntegrations(state.integrations, 'tasks', 'update', finalTask)
 
-          await get().addActivity({
-            userId: state.currentUser?.id || 'system',
-            type: 'task',
-            action: finalTask.status === 'completed' ? 'completed' : 'updated',
-            entityId: finalTask.id,
-            entityName: finalTask.title,
-            description: `עודכנה משימה: ${finalTask.title}`,
-          })
+          // Check if task was just completed
+          const taskCompleted = oldTask &&
+            oldTask.status !== 'completed' &&
+            finalTask.status === 'completed'
+
+          if (taskCompleted) {
+            // Task completed - generate invoice!
+            console.log('✅ Task completed, generating invoice...')
+
+            // Get related data
+            const customer = finalTask.customerId
+              ? state.customers.find(c => c.id === finalTask.customerId)
+              : undefined
+
+            const deal = finalTask.dealId
+              ? state.deals.find(d => d.id === finalTask.dealId)
+              : undefined
+
+            if (customer) {
+              // Create invoice
+              const invoice = createInvoiceFromTask(
+                finalTask,
+                customer,
+                deal,
+                state.products,
+                state.services
+              )
+
+              // Send to webhooks with special invoice event
+              notifyWebhooks(state.webhooks, 'task', 'update', {
+                ...finalTask,
+                _specialEvent: 'task_completed',
+                _invoice: invoice
+              }, getUpdateWebhook())
+
+              // Send invoice to N8N webhooks for processing
+              const invoiceWebhooks = state.webhooks.filter(w =>
+                w.enabled && w.events.includes('task')
+              )
+
+              for (const webhook of invoiceWebhooks) {
+                await sendInvoiceToWebhook(webhook.url, invoice)
+              }
+
+              await get().addActivity({
+                userId: state.currentUser?.id || 'system',
+                type: 'task',
+                action: 'completed',
+                entityId: finalTask.id,
+                entityName: finalTask.title,
+                description: `✅ משימה הושלמה וחשבונית נוצרה: ${finalTask.title} (${invoice.invoiceNumber})`,
+              })
+            } else {
+              // No customer - just mark as completed
+              notifyWebhooks(state.webhooks, 'task', 'update', {
+                ...finalTask,
+                _specialEvent: 'task_completed'
+              }, getUpdateWebhook())
+
+              await get().addActivity({
+                userId: state.currentUser?.id || 'system',
+                type: 'task',
+                action: 'completed',
+                entityId: finalTask.id,
+                entityName: finalTask.title,
+                description: `✅ משימה הושלמה: ${finalTask.title}`,
+              })
+            }
+          } else {
+            // Regular update
+            notifyWebhooks(state.webhooks, 'task', 'update', finalTask, getUpdateWebhook())
+
+            await get().addActivity({
+              userId: state.currentUser?.id || 'system',
+              type: 'task',
+              action: 'updated',
+              entityId: finalTask.id,
+              entityName: finalTask.title,
+              description: `עודכנה משימה: ${finalTask.title}`,
+            })
+          }
+
+          syncToIntegrations(state.integrations, 'tasks', 'update', finalTask)
         }
       },
 
