@@ -301,46 +301,44 @@ export const useAuthStore = create<AuthStore>()(
             }
 
             if (data.user) {
-              console.log('User created in Auth:', data.user.id)
+              console.log('✅ User created in Auth:', data.user.id)
 
-              // Create profile manually (don't rely on trigger)
+              // Wait for trigger to create profile (it happens automatically)
+              console.log('⏳ Waiting for profile creation trigger...')
+              await new Promise((resolve) => setTimeout(resolve, 2000))
+
+              // Fetch the profile created by trigger
               const { data: profile, error: profileError } = await supabase
                 .from('user_profiles')
-                .insert({
-                  id: data.user.id,
-                  first_name: firstName,
-                  last_name: lastName,
-                  role: 'sales',
-                  status: 'active',
-                })
-                .select()
+                .select('*')
+                .eq('id', data.user.id)
                 .single()
 
-              if (profileError) {
-                console.error('Profile creation error:', profileError)
-                // Profile might already exist from trigger, try to fetch it
-                await new Promise((resolve) => setTimeout(resolve, 1000))
+              if (profileError || !profile) {
+                console.error('❌ Profile not found after trigger:', profileError)
+                // Try one more time after another delay
+                await new Promise((resolve) => setTimeout(resolve, 1500))
 
-                const { data: existingProfile } = await supabase
+                const { data: retryProfile } = await supabase
                   .from('user_profiles')
                   .select('*')
                   .eq('id', data.user.id)
                   .single()
 
-                if (existingProfile) {
-                  console.log('Using existing profile:', existingProfile)
+                if (retryProfile) {
+                  console.log('✅ Profile found on retry:', retryProfile)
                   const user: User = {
-                    id: existingProfile.id,
+                    id: retryProfile.id,
                     email: data.user.email || '',
-                    firstName: existingProfile.first_name,
-                    lastName: existingProfile.last_name,
-                    role: existingProfile.role,
-                    status: existingProfile.status,
-                    avatar: existingProfile.avatar,
-                    phone: existingProfile.phone,
-                    department: existingProfile.department,
-                    monthlyTarget: existingProfile.monthly_target,
-                    createdAt: new Date(existingProfile.created_at),
+                    firstName: retryProfile.first_name,
+                    lastName: retryProfile.last_name,
+                    role: retryProfile.role,
+                    status: retryProfile.status,
+                    avatar: retryProfile.avatar,
+                    phone: retryProfile.phone,
+                    department: retryProfile.department,
+                    monthlyTarget: retryProfile.monthly_target,
+                    createdAt: new Date(retryProfile.created_at),
                     lastLogin: new Date(),
                   }
 
@@ -352,35 +350,32 @@ export const useAuthStore = create<AuthStore>()(
                   return true
                 }
 
-                console.error('Failed to create or fetch profile')
+                console.error('❌ Failed to fetch profile after registration')
                 return false
               }
 
-              if (profile) {
-                console.log('Profile created successfully:', profile)
-
-                const user: User = {
-                  id: profile.id,
-                  email: data.user.email || '',
-                  firstName: profile.first_name,
-                  lastName: profile.last_name,
-                  role: profile.role,
-                  status: profile.status,
-                  avatar: profile.avatar,
-                  phone: profile.phone,
-                  department: profile.department,
-                  monthlyTarget: profile.monthly_target,
-                  createdAt: new Date(profile.created_at),
-                  lastLogin: new Date(),
-                }
-
-                set({
-                  user,
-                  isAuthenticated: true,
-                })
-
-                return true
+              console.log('✅ Profile found:', profile)
+              const user: User = {
+                id: profile.id,
+                email: data.user.email || '',
+                firstName: profile.first_name,
+                lastName: profile.last_name,
+                role: profile.role,
+                status: profile.status,
+                avatar: profile.avatar,
+                phone: profile.phone,
+                department: profile.department,
+                monthlyTarget: profile.monthly_target,
+                createdAt: new Date(profile.created_at),
+                lastLogin: new Date(),
               }
+
+              set({
+                user,
+                isAuthenticated: true,
+              })
+
+              return true
             }
           } catch (error) {
             console.error('Registration error:', error)
