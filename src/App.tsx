@@ -19,6 +19,7 @@ import ActivityFeed from './pages/ActivityFeed'
 import TeamPerformance from './pages/TeamPerformance'
 import { useAuthStore } from './store/useAuthStore'
 import { useStore } from './store/useStore'
+import { subscribeToRealtimeUpdates, unsubscribeFromRealtimeUpdates } from './lib/realtimeSync'
 
 function App() {
   const { isAuthenticated, initializeAuth, user } = useAuthStore()
@@ -41,6 +42,20 @@ function App() {
       loadAllData()
     }
   }, [isAuthenticated, user, loadAllData])
+
+  // Subscribe to real-time updates when user is authenticated
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      console.log('🔴 [App] Starting realtime subscriptions for user:', user.id)
+      subscribeToRealtimeUpdates(user.id)
+
+      // Cleanup: unsubscribe when component unmounts or user logs out
+      return () => {
+        console.log('🔴 [App] Cleaning up realtime subscriptions')
+        unsubscribeFromRealtimeUpdates()
+      }
+    }
+  }, [isAuthenticated, user?.id])
 
   return (
     <>
