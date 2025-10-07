@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { Customer } from '../types';
-import { Plus, Edit2, Trash2, Phone, Mail, Building, Users, Upload, User, Search, Filter, Download, Send, CheckSquare, Square, SlidersHorizontal } from 'lucide-react';
+import { Plus, Edit2, Trash2, Phone, Mail, Building, Users, Upload, User, Search, Filter, Download, Send, CheckSquare, Square, SlidersHorizontal, MessageCircle } from 'lucide-react';
 import { exportCustomersToCSV } from '../utils/csvExport';
 import EmailComposer from '../components/EmailComposer';
+import WhatsAppComposer from '../components/WhatsAppComposer';
 import AdvancedSearch, { SearchFilters } from '../components/AdvancedSearch';
 import { showConfirm, crmToast } from '../utils/toast';
 
@@ -15,6 +16,8 @@ export default function Customers() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'lead'>('all');
   const [emailComposerOpen, setEmailComposerOpen] = useState(false);
   const [selectedCustomerForEmail, setSelectedCustomerForEmail] = useState<Customer | null>(null);
+  const [whatsappComposerOpen, setWhatsappComposerOpen] = useState(false);
+  const [selectedCustomerForWhatsApp, setSelectedCustomerForWhatsApp] = useState<Customer | null>(null);
   const [selectedCustomers, setSelectedCustomers] = useState<Set<string>>(new Set());
   const [bulkActionMenuOpen, setBulkActionMenuOpen] = useState(false);
   const [advancedSearchOpen, setAdvancedSearchOpen] = useState(false);
@@ -97,6 +100,11 @@ export default function Customers() {
   const handleSendEmail = (customer: Customer) => {
     setSelectedCustomerForEmail(customer);
     setEmailComposerOpen(true);
+  };
+
+  const handleSendWhatsApp = (customer: Customer) => {
+    setSelectedCustomerForWhatsApp(customer);
+    setWhatsappComposerOpen(true);
   };
 
   // Bulk Selection Handlers
@@ -457,8 +465,15 @@ export default function Customers() {
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => handleSendEmail(customer)}
+                    onClick={() => handleSendWhatsApp(customer)}
                     className="p-2 text-green-600 hover:bg-green-50 rounded"
+                    title="שלח ב-WhatsApp"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleSendEmail(customer)}
+                    className="p-2 text-purple-600 hover:bg-purple-50 rounded"
                     title="שלח אימייל"
                   >
                     <Send className="w-4 h-4" />
@@ -660,6 +675,15 @@ export default function Customers() {
           setSelectedCustomerForEmail(null);
         }}
         recipient={selectedCustomerForEmail || undefined}
+      />
+
+      <WhatsAppComposer
+        isOpen={whatsappComposerOpen}
+        onClose={() => {
+          setWhatsappComposerOpen(false);
+          setSelectedCustomerForWhatsApp(null);
+        }}
+        customer={selectedCustomerForWhatsApp}
       />
 
       {/* Advanced Search */}
