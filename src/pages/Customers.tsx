@@ -5,6 +5,7 @@ import { Plus, Edit2, Trash2, Phone, Mail, Building, Users, Upload, User, Search
 import { exportCustomersToCSV } from '../utils/csvExport';
 import EmailComposer from '../components/EmailComposer';
 import AdvancedSearch, { SearchFilters } from '../components/AdvancedSearch';
+import { showConfirm, crmToast } from '../utils/toast';
 
 export default function Customers() {
   const { customers, addCustomer, updateCustomer, deleteCustomer } = useStore();
@@ -40,7 +41,7 @@ export default function Customers() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const customerData = {
@@ -48,13 +49,18 @@ export default function Customers() {
       name: `${formData.firstName} ${formData.lastName}`.trim(),
     };
 
-    if (editingCustomer) {
-      updateCustomer(editingCustomer.id, customerData);
-    } else {
-      addCustomer(customerData);
+    try {
+      if (editingCustomer) {
+        await updateCustomer(editingCustomer.id, customerData);
+        crmToast.customerUpdated();
+      } else {
+        await addCustomer(customerData);
+        crmToast.customerCreated();
+      }
+      handleCloseModal();
+    } catch (error) {
+      crmToast.error('שגיאה בשמירת הלקוח');
     }
-
-    handleCloseModal();
   };
 
   const handleEdit = (customer: Customer) => {
@@ -76,9 +82,15 @@ export default function Customers() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('האם אתה בטוח שברצונך למחוק לקוח זה?')) {
-      deleteCustomer(id);
+  const handleDelete = async (id: string) => {
+    const confirmed = await showConfirm('האם אתה בטוח שברצונך למחוק לקוח זה?');
+    if (confirmed) {
+      try {
+        await deleteCustomer(id);
+        crmToast.customerDeleted();
+      } catch (error) {
+        crmToast.error('שגיאה במחיקת הלקוח');
+      }
     }
   };
 
@@ -106,11 +118,19 @@ export default function Customers() {
     }
   };
 
-  const handleBulkDelete = () => {
-    if (window.confirm(`האם אתה בטוח שברצונך למחוק ${selectedCustomers.size} לקוחות?`)) {
-      selectedCustomers.forEach(id => deleteCustomer(id));
-      setSelectedCustomers(new Set());
-      setBulkActionMenuOpen(false);
+  const handleBulkDelete = async () => {
+    const confirmed = await showConfirm(`האם אתה בטוח שברצונך למחוק ${selectedCustomers.size} לקוחות?`);
+    if (confirmed) {
+      try {
+        for (const id of selectedCustomers) {
+          await deleteCustomer(id);
+        }
+        crmToast.customerDeleted();
+        setSelectedCustomers(new Set());
+        setBulkActionMenuOpen(false);
+      } catch (error) {
+        crmToast.error('שגיאה במחיקת לקוחות');
+      }
     }
   };
 

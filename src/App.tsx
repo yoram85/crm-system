@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
+import { Toaster } from 'react-hot-toast'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import Login from './pages/Login'
@@ -42,8 +43,35 @@ function App() {
   }, [isAuthenticated, user, loadAllData])
 
   return (
-    <Router>
-      <Routes>
+    <>
+      <Toaster
+        position="top-center"
+        reverseOrder={false}
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#fff',
+            color: '#363636',
+            padding: '16px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+          },
+          success: {
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
+      <Router>
+        <Routes>
         {/* Public Routes */}
         <Route
           path="/login"
@@ -87,6 +115,7 @@ function App() {
         />
       </Routes>
     </Router>
+    </>
   )
 }
 
