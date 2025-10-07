@@ -50,7 +50,15 @@ const Login = () => {
         setIsLoading(false)
       }
     } catch (err: any) {
-      setError(`שגיאה בהתחברות: ${err?.message || 'נסה שוב'}`)
+      const errorMessage = err?.message || ''
+
+      // Handle rate limiting error
+      if (errorMessage.includes('after') || errorMessage.includes('Too Many Requests')) {
+        setError('⏱️ יותר מדי ניסיונות. אנא המתן מעט ונסה שוב.')
+      } else {
+        setError(`שגיאה בהתחברות: ${errorMessage || 'נסה שוב'}`)
+      }
+
       setIsLoading(false)
     }
   }

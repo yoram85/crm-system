@@ -55,7 +55,17 @@ const Register = () => {
         setIsLoading(false);
       }
     } catch (err: any) {
-      setError(`שגיאה בהרשמה: ${err?.message || 'נסה שוב'}`);
+      const errorMessage = err?.message || '';
+
+      // Handle rate limiting error
+      if (errorMessage.includes('after 25 seconds') || errorMessage.includes('Too Many Requests')) {
+        setError('⏱️ יותר מדי ניסיונות. אנא המתן 25 שניות ונסה שוב.');
+      } else if (errorMessage.includes('already registered')) {
+        setError('המייל כבר רשום במערכת. נסה להתחבר במקום.');
+      } else {
+        setError(`שגיאה בהרשמה: ${errorMessage || 'נסה שוב'}`);
+      }
+
       setIsLoading(false);
     }
   };
