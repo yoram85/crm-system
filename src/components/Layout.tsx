@@ -133,14 +133,18 @@ const Layout = ({ children }: LayoutProps) => {
                 {user?.firstName} {user?.lastName}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                {user?.role === "admin"
-                  ? "מנהל"
+                {user?.role === "developer"
+                  ? "מפתח"
+                  : user?.role === "admin"
+                  ? "מנהל מערכת"
                   : user?.role === "manager"
-                  ? "מנהל צוות"
+                  ? "מנהל מכירות"
                   : user?.role === "sales"
-                  ? "מכירות"
+                  ? "איש מכירות"
                   : user?.role === "support"
                   ? "תמיכה"
+                  : user?.role === "user"
+                  ? "משתמש"
                   : "צופה"}
               </p>
             </div>
