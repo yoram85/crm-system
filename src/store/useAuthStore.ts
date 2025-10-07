@@ -7,6 +7,8 @@ interface AuthStore extends AuthState {
   login: (email: string, password: string) => Promise<boolean>
   register: (email: string, password: string, firstName: string, lastName: string) => Promise<boolean>
   signInWithGoogle: () => Promise<void>
+  signInWithFacebook: () => Promise<void>
+  resetUserPassword: (userId: string, newPassword: string) => Promise<boolean>
   logout: () => void
   updateLastLogin: () => void
   initializeAuth: () => Promise<void>
@@ -418,20 +420,16 @@ export const useAuthStore = create<AuthStore>()(
 
       signInWithGoogle: async () => {
         console.log('🟢 [AuthStore] signInWithGoogle called')
-        console.log('🟢 [AuthStore] Checking if Supabase is configured...')
 
         if (!isSupabaseConfigured()) {
           console.error('❌ [AuthStore] Supabase not configured for Google OAuth')
           throw new Error('Supabase לא מוגדר. בדוק את קובץ .env.local')
         }
 
-        console.log('✅ [AuthStore] Supabase is configured')
-
         const redirectUrl = `${window.location.origin}/login`
         console.log('🟢 [AuthStore] Redirect URL:', redirectUrl)
 
         try {
-          console.log('🟢 [AuthStore] Calling supabase.auth.signInWithOAuth...')
           const { data, error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
@@ -443,27 +441,113 @@ export const useAuthStore = create<AuthStore>()(
             },
           })
 
-          console.log('🟢 [AuthStore] OAuth response data:', data)
-
           if (error) {
             console.error('❌ [AuthStore] Google sign-in error:', error)
-            console.error('❌ [AuthStore] Error code:', error.code)
-            console.error('❌ [AuthStore] Error message:', error.message)
-            console.error('❌ [AuthStore] Error status:', error.status)
             throw error
           }
 
-          // Manually redirect to Google OAuth URL
           if (data?.url) {
-            console.log('✅ [AuthStore] OAuth initiated successfully, redirecting to Google...')
-            console.log('🟢 [AuthStore] Redirecting to:', data.url)
+            console.log('✅ [AuthStore] Redirecting to Google...')
             window.location.href = data.url
           } else {
-            console.error('❌ [AuthStore] No OAuth URL returned from Supabase')
             throw new Error('לא התקבל URL להתחברות')
           }
         } catch (error: any) {
           console.error('❌ [AuthStore] Caught error in signInWithGoogle:', error)
+          throw error
+        }
+      },
+
+      signInWithFacebook: async () => {
+        console.log('🟦 [AuthStore] signInWithFacebook called')
+
+        if (!isSupabaseConfigured()) {
+          console.error('❌ [AuthStore] Supabase not configured for Facebook OAuth')
+          throw new Error('Supabase לא מוגדר. בדוק את קובץ .env.local')
+        }
+
+        const redirectUrl = `${window.location.origin}/login`
+        console.log('🟦 [AuthStore] Redirect URL:', redirectUrl)
+
+        try {
+          const { data, error } = await supabase.auth.signInWithOAuth({
+            provider: 'facebook',
+            options: {
+              redirectTo: redirectUrl,
+            },
+          })
+
+          if (error) {
+            console.error('❌ [AuthStore] Facebook sign-in error:', error)
+            throw error
+          }
+
+          if (data?.url) {
+            console.log('✅ [AuthStore] Redirecting to Facebook...')
+            window.location.href = data.url
+          } else {
+            throw new Error('לא התקבל URL להתחברות')
+          }
+        } catch (error: any) {
+          console.error('❌ [AuthStore] Caught error in signInWithFacebook:', error)
+          throw error
+        }
+      },
+
+      resetUserPassword: async (userId: string, newPassword: string) => {
+        console.log('🔑 [AuthStore] resetUserPassword called for user:', userId)
+
+        const currentUser = get().user
+        if (!currentUser || currentUser.role !== 'developer') {
+          console.error('❌ [AuthStore] Only developers can reset passwords')
+          throw new Error('רק מפתחים יכולים לאפס סיסמאות')
+        }
+
+        if (!isSupabaseConfigured()) {
+          console.warn('⚠️ [AuthStore] Supabase not configured, mock password reset')
+          // Mock implementation - just log
+          const mockUser = mockUsers.find(u => u.id === userId)
+          if (mockUser) {
+            mockUser.password = newPassword
+            return true
+          }
+          return false
+        }
+
+        try {
+          // In Supabase, we need to use the admin API to update user password
+          // This requires the service role key which should only be used on the backend
+          // For now, we'll send a password reset email to the user
+          const { data: userData, error: userError } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('id', userId)
+            .single()
+
+          if (userError || !userData) {
+            console.error('❌ [AuthStore] User not found:', userError)
+            throw new Error('משתמש לא נמצא')
+          }
+
+          // Get the user's auth email
+          const userEmail = userData.email || ''
+
+          // For security, we'll use Supabase's admin.updateUserById
+          // This requires calling a backend function with service role key
+          // For now, we'll use the regular password reset which sends an email
+          const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
+            redirectTo: `${window.location.origin}/reset-password`,
+          })
+
+          if (error) {
+            console.error('❌ [AuthStore] Password reset error:', error)
+            throw error
+          }
+
+          console.log('✅ [AuthStore] Password reset email sent successfully')
+          return true
+        } catch (error: any) {
+          console.error('❌ [AuthStore] Error in resetUserPassword:', error)
           throw error
         }
       },

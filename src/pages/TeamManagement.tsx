@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useStore } from '../store/useStore'
+import { useAuthStore } from '../store/useAuthStore'
 import { User, UserRole } from '../types'
-import { Users, Plus, Edit2, Trash2, Shield, Mail, Phone, Building } from 'lucide-react'
+import { Users, Plus, Edit2, Trash2, Shield, Mail, Phone, Building, Key } from 'lucide-react'
 import { PermissionGuard } from '../components/PermissionGuard'
 import { format } from 'date-fns'
 
@@ -27,8 +28,14 @@ const roleColors: Record<UserRole, string> = {
 
 const TeamManagement = () => {
   const { users, addUser, updateUser, deleteUser, currentUser } = useStore()
+  const { user: authUser, resetUserPassword } = useAuthStore()
   const [showModal, setShowModal] = useState(false)
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [passwordResetUser, setPasswordResetUser] = useState<User | null>(null)
+  const [newPassword, setNewPassword] = useState('')
+  const [passwordError, setPasswordError] = useState('')
+  const [passwordSuccess, setPasswordSuccess] = useState('')
   const [formData, setFormData] = useState({
     email: '',
     firstName: '',
@@ -39,6 +46,8 @@ const TeamManagement = () => {
     status: 'active' as 'active' | 'inactive' | 'pending',
     monthlyTarget: 0
   })
+
+  const isDeveloper = authUser?.role === 'developer'
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -85,6 +94,41 @@ const TeamManagement = () => {
   const handleDelete = (id: string) => {
     if (confirm('האם אתה בטוח שברצונך למחוק משתמש זה?')) {
       deleteUser(id)
+    }
+  }
+
+  const handlePasswordReset = (user: User) => {
+    setPasswordResetUser(user)
+    setNewPassword('')
+    setPasswordError('')
+    setPasswordSuccess('')
+    setShowPasswordModal(true)
+  }
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setPasswordError('')
+    setPasswordSuccess('')
+
+    if (newPassword.length < 6) {
+      setPasswordError('הסיסמה חייבת להכיל לפחות 6 תווים')
+      return
+    }
+
+    if (!passwordResetUser) return
+
+    try {
+      const success = await resetUserPassword(passwordResetUser.id, newPassword)
+      if (success) {
+        setPasswordSuccess('איפוס סיסמה בוצע בהצלחה. נשלח אימייל למשתמש.')
+        setTimeout(() => {
+          setShowPasswordModal(false)
+          setPasswordResetUser(null)
+          setNewPassword('')
+        }, 2000)
+      }
+    } catch (err: any) {
+      setPasswordError(err?.message || 'שגיאה באיפוס סיסמה')
     }
   }
 
@@ -260,13 +304,24 @@ const TeamManagement = () => {
                         <button
                           onClick={() => handleEdit(user)}
                           className="text-blue-600 hover:text-blue-900"
+                          title="עריכה"
                         >
                           <Edit2 size={18} />
                         </button>
+                        {isDeveloper && (
+                          <button
+                            onClick={() => handlePasswordReset(user)}
+                            className="text-orange-600 hover:text-orange-900"
+                            title="איפוס סיסמה"
+                          >
+                            <Key size={18} />
+                          </button>
+                        )}
                         <button
                           onClick={() => handleDelete(user.id)}
                           className="text-red-600 hover:text-red-900"
                           disabled={user.id === currentUser?.id}
+                          title="מחיקה"
                         >
                           <Trash2 size={18} />
                         </button>
@@ -424,6 +479,88 @@ const TeamManagement = () => {
                   <button type="submit" className="btn-primary">
                     {editingUser ? 'עדכן' : 'הוסף'}
                   </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Password Reset Modal (Developer only) */}
+        {showPasswordModal && passwordResetUser && isDeveloper && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-md w-full p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <Key className="text-orange-600" size={24} />
+                <h2 className="text-xl font-bold">איפוס סיסמה</h2>
+              </div>
+
+              <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>משתמש:</strong> {passwordResetUser.firstName} {passwordResetUser.lastName}
+                </p>
+                <p className="text-sm text-blue-800">
+                  <strong>אימייל:</strong> {passwordResetUser.email}
+                </p>
+              </div>
+
+              {passwordError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-red-700">{passwordError}</p>
+                </div>
+              )}
+
+              {passwordSuccess && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-green-700">{passwordSuccess}</p>
+                </div>
+              )}
+
+              <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    סיסמה חדשה
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="input-field w-full"
+                    placeholder="לפחות 6 תווים"
+                    minLength={6}
+                    disabled={!!passwordSuccess}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    הסיסמה חייבת להכיל לפחות 6 תווים
+                  </p>
+                </div>
+
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <p className="text-xs text-yellow-800">
+                    ⚠️ המשתמש יקבל אימייל עם קישור לאיפוס הסיסמה
+                  </p>
+                </div>
+
+                <div className="flex gap-3 justify-end pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPasswordModal(false)
+                      setPasswordResetUser(null)
+                      setNewPassword('')
+                      setPasswordError('')
+                      setPasswordSuccess('')
+                    }}
+                    className="btn-secondary"
+                    disabled={!!passwordSuccess}
+                  >
+                    {passwordSuccess ? 'סגור' : 'ביטול'}
+                  </button>
+                  {!passwordSuccess && (
+                    <button type="submit" className="btn-primary">
+                      שלח איפוס סיסמה
+                    </button>
+                  )}
                 </div>
               </form>
             </div>
